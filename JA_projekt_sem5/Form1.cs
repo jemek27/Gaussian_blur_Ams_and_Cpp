@@ -13,7 +13,10 @@ namespace JA_projekt_sem5 {
         private static extern void gaussBlur(IntPtr bitmapData, int width, int height, int stride, int kernelSize, float sigma);
 
         [DllImport(@"C:\Users\jemek\source\repos\JA_projekt_sem5\x64\Debug\JAAsm.dll")]
-        private static extern long gaussBlurAsm(IntPtr bitmapData, int width, int height, int stride, int kernelSize, float sigma);
+        private static extern float gaussBlurAsm(IntPtr bitmapData, int[] packedArguments, float sigma); //TODO into void
+                                                                                                         //        private static extern long gaussBlurAsm(IntPtr bitmapData, int width, int height, int stride, int kernelSize, float sigma);
+        [DllImport(@"C:\Users\jemek\source\repos\JA_projekt_sem5\x64\Debug\JAAsm.dll")]
+        private static extern long ProcessBitmapAsm(IntPtr bitmapData, int width, int height, int stride);
 
         private Bitmap bitmap;
 
@@ -59,7 +62,7 @@ namespace JA_projekt_sem5 {
             }
         }
 
-        private void button2_Click(object sender, EventArgs e) {
+        private void buttonLoadPicture_Click(object sender, EventArgs e) {
 
             if (openFileDialog.ShowDialog() == DialogResult.OK) {
                 bitmap = ConvertImageToBitmap(openFileDialog.FileName);
@@ -69,16 +72,29 @@ namespace JA_projekt_sem5 {
 
         private void processPictureButton_Click(object sender, EventArgs e) {
             if (bitmap != null) {
+                //TODO work on copy 
                 // Lock the bitmap's bits to get access to its pixel data
                 BitmapData bmpData = bitmap.LockBits(
                     new Rectangle(0, 0, bitmap.Width, bitmap.Height),
                     ImageLockMode.ReadWrite,
                     PixelFormat.Format24bppRgb);
 
-                long testRet = gaussBlurAsm(bmpData.Scan0, bitmap.Width, bitmap.Height, bmpData.Stride, kernelSize, sigma);
-                labelAsmTestResult.Text = $"retVal = {testRet} | {bmpData.Scan0}";
-                //gaussBlur(bmpData.Scan0, bitmap.Width, bitmap.Height, bmpData.Stride, kernelSize, sigma);
-                //ProcessBitmap(bmpData.Scan0, bitmap.Width, bitmap.Height, bmpData.Stride);
+                if(radioButtonAsm.Checked) {
+                    int[] gaussBlurAsmArguments = new int[4];
+                    gaussBlurAsmArguments[0] = bitmap.Width;
+                    gaussBlurAsmArguments[1] = bitmap.Height;
+                    gaussBlurAsmArguments[2] = bmpData.Stride;
+                    gaussBlurAsmArguments[3] = kernelSize;
+                    float testRet = gaussBlurAsm(bmpData.Scan0, gaussBlurAsmArguments, sigma);
+                    labelAsmTestResult.Text = $"retVal = {testRet} | {kernelSize} | {sigma}";
+                }
+
+                if (radioButtonCpp.Checked) {
+                    gaussBlur(bmpData.Scan0, bitmap.Width, bitmap.Height, bmpData.Stride, kernelSize, sigma);
+                    //ProcessBitmap(bmpData.Scan0, bitmap.Width, bitmap.Height, bmpData.Stride);
+                }
+
+
                 bitmap.UnlockBits(bmpData);
                 DisplayImage(bitmap, processedPicture);
             }
@@ -108,7 +124,7 @@ namespace JA_projekt_sem5 {
 
         private static extern float createGaussianKernel(Byte kernelSize, float sigma, float[] kernel);
 
-        private void button1_Click(object sender, EventArgs e) {
+        private void buttonTestAsm_Click(object sender, EventArgs e) {
             double[] tabX = new double[14];
             int[] tabN = new int[14];
 
@@ -129,6 +145,18 @@ namespace JA_projekt_sem5 {
                 $"                      \n {string.Join(", ", tabX)}  " +
                 $"                      \n {string.Join(", ", tabN)}\n" +
                 $"                      Kernal = {a} | {string.Join(", ", tabK)}";
+        }
+
+        private void radioButtonAsm_CheckedChanged(object sender, EventArgs e) {
+            if (radioButtonAsm.Checked) {
+                radioButtonCpp.Checked = false;
+            }
+        }
+
+        private void radioButtonCpp_CheckedChanged(object sender, EventArgs e) {
+            if (radioButtonCpp.Checked) {
+                radioButtonAsm.Checked = false; 
+            }
         }
     }
 }
