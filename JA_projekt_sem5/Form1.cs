@@ -1,6 +1,7 @@
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 
 namespace JA_projekt_sem5 {
@@ -10,6 +11,9 @@ namespace JA_projekt_sem5 {
         private static extern void ProcessBitmap(IntPtr bitmapData, int width, int height, int stride);
         [DllImport(@"C:\Users\jemek\source\repos\JA_projekt_sem5\x64\Debug\C_functions.dll")]
         private static extern void gaussBlur(IntPtr bitmapData, int width, int height, int stride, int kernelSize, float sigma);
+
+        [DllImport(@"C:\Users\jemek\source\repos\JA_projekt_sem5\x64\Debug\JAAsm.dll")]
+        private static extern long gaussBlurAsm(IntPtr bitmapData, int width, int height, int stride, int kernelSize, float sigma);
 
         private Bitmap bitmap;
 
@@ -71,7 +75,9 @@ namespace JA_projekt_sem5 {
                     ImageLockMode.ReadWrite,
                     PixelFormat.Format24bppRgb);
 
-                gaussBlur(bmpData.Scan0, bitmap.Width, bitmap.Height, bmpData.Stride, kernelSize, sigma);
+                long testRet = gaussBlurAsm(bmpData.Scan0, bitmap.Width, bitmap.Height, bmpData.Stride, kernelSize, sigma);
+                labelAsmTestResult.Text = $"retVal = {testRet} | {bmpData.Scan0}";
+                //gaussBlur(bmpData.Scan0, bitmap.Width, bitmap.Height, bmpData.Stride, kernelSize, sigma);
                 //ProcessBitmap(bmpData.Scan0, bitmap.Width, bitmap.Height, bmpData.Stride);
                 bitmap.UnlockBits(bmpData);
                 DisplayImage(bitmap, processedPicture);

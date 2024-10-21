@@ -2,3 +2,4 @@ LIBRARY JAAsm
 EXPORTS MyProc1
 		expAsm
 		createGaussianKernel
+		gaussBlurAsm

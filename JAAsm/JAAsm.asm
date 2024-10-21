@@ -60,11 +60,11 @@ n_factorial:
     jmp n_factorial                     ; Powr�? do p?tli
 
 enf_of_n_factorial:
-    ; Operacja sum += tabX[i] / tabN[i]
     xor rbx, rbx            ; Counter
     pxor xmm2, xmm2         ; Wyzeruj xmm2 (suma)
 
 sum_loop:
+    ; Operacja sum += tabX[i] / tabN[i]
     cmp rbx, n              ; Sprawd? czy RBX (indeks) nie przekracza rozmiaru tablicy
     je end_sum              ; Je?eli tak, zako?cz p?tl?
 
@@ -90,6 +90,7 @@ end_sum:
     pop rdi                      ; Przywróć stan rejestru RDI
     pop rax                      ; Przywróć stan rejestru RAX
     pop rbx                      ; Przywróć stan rejestru RBX
+
     ret
 expAsm endp
 
@@ -106,17 +107,10 @@ MyProc1 endp
 ; R8 - pointer to tabK (float array)
 ; CL - kernelSize (Byte)
 createGaussianKernel proc
-    ; Za?aduj parametry dla wywo?ania expAsm
-    ; movss xmm0, [xf]               ; Za?aduj warto?? 2.7 do xmm0
-    ; lea rdx, testTabX           ; Za?aduj wska?nik na tabX do rdx
-    ; call expAsm                 ; Wywo?aj funkcj? expAsm(x = 2.7, tabX, tabN)
-    ; TODO konwertuj na double
-    ; ret
     lea rdi, [r8]              ; Za?aduj wska?nik tablicy kernel do rejestru rdi
 
     movzx rax, cl              ; Przekonwertuj kernelSize (byte) na 64-bitow? warto?? (rax)
     mov rcx, rax
-    ;cvtsi2ss xmm2, rax          ; Konwertuje wartość z RAX na float i zapisuje w XMM0
     xor rbx, rbx                ; Ustaw indeks na 0
 
     mulss xmm1, xmm1           ; sigma^2
@@ -131,36 +125,28 @@ createGaussianKernel proc
     cvtsi2ss xmm4, rax         ; Załaduj x (indeks) do xmm4 jako float
 
     movss xmm10, [one]       ; Załaduj wartość 1.0 do xmm0
-    ; movss xmm0, xmm4
-    ; ret
+
 fill_kernel_loop:
     ; Oblicz Gauss 1D G(x) = exp(-x^2 / (2 * sigma^2)) / sqrt(2 * M_PI * sigma^2)
     ; Oblicz x^2
     movss xmm5, xmm4
     mulss xmm5, xmm5           ; xmm5 = x^2
-    ; movss xmm0, xmm5
-    ; ret
+
     ; Oblicz -x^2 / (2 * sigma^2)
     divss xmm5, xmm6           ; xmm5 = x^2 / (2 * sigma^2)
-    ; movss xmm0, xmm5
-    ; ret
+
     movss xmm0, [neg_one]
     mulss xmm5, xmm0           ; xmm5 = -x^2 / (2 * sigma^2)
-    ; movss xmm0, xmm5
-    ; ret
+ 
     ; Oblicz exp(-x^2 / (2 * sigma^2))
     movss xmm0, xmm5
-    ; ret ; -0.78125f
+
 
     call expAsm                   ; wywołaj funkcję exp, wynik w xmm0
-    ; ret ; 0,45782
+
     ; Oblicz sqrt(2 * M_PI * sigma^2)
     movss xmm8, dword ptr [pi] ; Załaduj wartość M_PI
-    ; movss xmm0, xmm8
-    ; ret ;git
     mulss xmm8, xmm6           ; xmm8 = PI * (2 * sigma^2) 
-    ; movss xmm0, xmm8
-    ; ret ; 105,5309 git
     sqrtss xmm8, xmm8         ; xmm8 = sqrt(2 * sigma^2 * M_PI)
 
     ; Oblicz G(x) = exp(-x^2 / (2 * sigma^2)) / sqrt(2 * M_PI * sigma^2)
@@ -169,7 +155,7 @@ fill_kernel_loop:
     ; Wstaw wynik do tablicy kernel[i]
     
     movss dword ptr [rdi + rbx * 4], xmm0 ; Wpisz wynik do kernel[rcx]
-    ; ret
+
     ; Zaktualizuj sumę
     addss xmm3, xmm0           ; sum += G(x)
 
@@ -194,5 +180,74 @@ normalize_kernel_loop:
 
     ret
 createGaussianKernel endp
+;//////////////////////////////////
+
+gaussBlurAsm proc
+    ; Wejście: 
+    ;   - rcx: bitmapData (wskazanie na dane bitmapy)
+    ;   - rdx: width (szerokość obrazu)
+    ;   - r8:  height (wysokość obrazu)
+    ;   - r9:  stride (ilość bajtów na linię skanowania)    
+
+    ; Zapisz stan rejestrów, które będziesz modyfikować
+    ;push rbx
+    ;push rsi
+    ;push rdi
+
+    ; Przygotuj parametry
+    mov rsi, rcx        ; bitmapData -> rsi
+    mov r10, r8         ; height -> r10
+    shr r10, 1          ; height / 2
+
+    ; Y-loop: Przechodzi przez połowę wysokości
+    xor rbx, rbx               ; rbx -> y = 0
+y_loop:
+    cmp rbx, r8               ; if (y >= height), zakończ pętlę
+    jge end_y_loop
+
+    ; X-loop: Przechodzi przez połowę szerokości
+    xor rcx, rcx               ; rcx -> x = 0
+x_loop:
+    cmp rcx, rdx               ; if (x >= width), zakończ pętlę X
+    jge end_x_loop
+
+    ; Oblicz index piksela (pixelIndex = y * stride + x * 3)
+    mov rax, rbx                ; rax = y
+    imul rax, r9                ; rax = y * stride
+    imul r11, rcx, 3            ; r11 = x * 3
+    add  rax, r11               ; rax = y * stride + x * 3      
+
+    ; Sprawdzenie, czy jesteśmy w górnej połowie obrazu
+    cmp rbx, r10
+    jl set_white               ; Jeśli y < height / 2, ustaw biały kolor
+
+    ; Ustaw czerwony kolor (dolna połowa)
+    mov byte ptr [rsi + rax], 0     ; Blue = 0
+    mov byte ptr [rsi + rax + 1], 0 ; Green = 0
+    mov byte ptr [rsi + rax + 2], 255; Red = 255
+    jmp continue_x_loop
+
+set_white:
+    ; Ustaw biały kolor (górna połowa)
+    mov byte ptr [rsi + rax], 255   ; Blue = 255
+    mov byte ptr [rsi + rax + 1], 255; Green = 255
+    mov byte ptr [rsi + rax + 2], 255; Red = 255
+
+continue_x_loop:
+    inc rcx                        ; x++
+    jmp x_loop                     ; powrót do pętli X
+
+end_x_loop:
+    inc rbx                        ; y++
+    jmp y_loop                     ; powrót do pętli Y
+
+end_y_loop:
+    ; Przywróć stan rejestrów
+    ;pop rdi
+    ;pop rsi
+    ;pop rbx
+
+    ret
+gaussBlurAsm endp
 ;//////////////////////////////////
 end
