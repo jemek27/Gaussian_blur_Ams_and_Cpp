@@ -182,7 +182,98 @@ normalize_kernel_loop:
 createGaussianKernel endp
 ;//////////////////////////////////
 
+;//////////////////////////////////
+    ; Wejście: 
+    ;   - rcx: bitmapData (wskazanie na dane bitmapy)
+    ;   - rdx: array args [width, height, stride, kernelSize]
+    ;   - xmm2: sigma 
+ ;///////////////  
+    ; Uzywane rejestry:
+    ; rcx   x
+    ; rdx   y
+    ; r8    width   
+    ; r9    height
+    ; r10   stride
+    ; r11   kernelSize
+    ; r12   height / 2
+    ; rsi   *bitmapData
+    ;
+    ; xmm2  sigma 
 gaussBlurAsm proc
+    ; Zapisz stan rejestrów, które będziesz modyfikować
+    ;push rbx
+    ;push rsi
+    ;push rdi
+
+    ; Przygotuj parametry
+    xor r8, r8   
+    xor r9, r9 
+    xor r10, r10 
+    xor r11, r11 
+
+    mov rsi, rcx                        ; rsi = *bitmapData
+    mov r8d, dword ptr [rdx]            ; r8  = width   
+    mov r9d, dword ptr [rdx + 4]        ; r9  = height
+    mov r10d, dword ptr [rdx + 8]       ; r10 = stride
+    mov r11d, dword ptr [rdx + 12]      ; r11 = kernelSize
+
+    mov r12, r9                         ; height -> r12
+    shr r12, 1                          ; r12 = height / 2
+
+    ; Y-loop: Przechodzi przez połowę wysokości
+    xor rcx, rcx               ; rcx -> y = 0
+y_loop:
+    cmp rcx, r9               ; if (y >= height), zakończ pętlę
+    jge end_y_loop
+
+    ; X-loop: Przechodzi przez połowę szerokości
+    xor rdx, rdx               ; rdx -> x = 0
+x_loop:
+    cmp rdx, r8               ; if (x >= width), zakończ pętlę X
+    jge end_x_loop
+
+    ; Oblicz index piksela (pixelIndex = y * stride + x * 3)
+    mov rax, rcx                ; rax = y
+    imul rax, r10                ; rax = y * stride
+    imul rbx, rdx, 3            ; r11 = x * 3
+    add  rax, rbx               ; rax = y * stride + x * 3      
+
+    ; Sprawdzenie, czy jesteśmy w górnej połowie obrazu
+    cmp rcx, r12
+    jl set_white               ; Jeśli y < height / 2, ustaw biały kolor
+
+    ; Ustaw czerwony kolor (dolna połowa)
+    mov byte ptr [rsi + rax], 0     ; Blue = 0
+    mov byte ptr [rsi + rax + 1], 0 ; Green = 0
+    mov byte ptr [rsi + rax + 2], 255; Red = 255
+    jmp continue_x_loop
+
+set_white:
+    ; Ustaw biały kolor (górna połowa)
+    mov byte ptr [rsi + rax], 255   ; Blue = 255
+    mov byte ptr [rsi + rax + 1], 255; Green = 255
+    mov byte ptr [rsi + rax + 2], 255; Red = 255
+
+continue_x_loop:
+    inc rdx                        ; x++
+    jmp x_loop                     ; powrót do pętli X
+
+end_x_loop:
+    inc rcx                        ; y++
+    jmp y_loop                     ; powrót do pętli Y
+
+end_y_loop:
+    ; Przywróć stan rejestrów
+    ;pop rdi
+    ;pop rsi
+    ;pop rbx
+
+    ret
+gaussBlurAsm endp
+;//////////////////////////////////
+
+;//////////////////////////////////
+ProcessBitmapAsm proc
     ; Wejście: 
     ;   - rcx: bitmapData (wskazanie na dane bitmapy)
     ;   - rdx: width (szerokość obrazu)
@@ -248,6 +339,6 @@ end_y_loop:
     ;pop rbx
 
     ret
-gaussBlurAsm endp
+ProcessBitmapAsm endp
 ;//////////////////////////////////
 end
