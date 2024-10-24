@@ -1,6 +1,7 @@
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
+using System.Threading.Tasks;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 
@@ -13,7 +14,7 @@ namespace JA_projekt_sem5 {
         private static extern void gaussBlur(IntPtr bitmapData, int width, int height, int stride, int kernelSize, float sigma);
 
         [DllImport(@"C:\Users\jemek\source\repos\JA_projekt_sem5\x64\Debug\JAAsm.dll")]
-        private static extern float gaussBlurAsm(IntPtr bitmapData, int[] packedArguments, float sigma); //TODO into void
+        private static extern int gaussBlurAsm(IntPtr bitmapData, int[] packedArguments, IntPtr tempBitmapData, float[] kernel); //TODO into void
                                                                                                          //        private static extern long gaussBlurAsm(IntPtr bitmapData, int width, int height, int stride, int kernelSize, float sigma);
         [DllImport(@"C:\Users\jemek\source\repos\JA_projekt_sem5\x64\Debug\JAAsm.dll")]
         private static extern long ProcessBitmapAsm(IntPtr bitmapData, int width, int height, int stride);
@@ -72,7 +73,8 @@ namespace JA_projekt_sem5 {
 
         private void processPictureButton_Click(object sender, EventArgs e) {
             if (bitmap != null) {
-                //TODO work on copy 
+                
+                Bitmap copyBitmap = new Bitmap(bitmap);
                 // Lock the bitmap's bits to get access to its pixel data
                 BitmapData bmpData = bitmap.LockBits(
                     new Rectangle(0, 0, bitmap.Width, bitmap.Height),
@@ -80,13 +82,27 @@ namespace JA_projekt_sem5 {
                     PixelFormat.Format24bppRgb);
 
                 if(radioButtonAsm.Checked) {
+                    float[] kernel = new float[kernelSize];
+
                     int[] gaussBlurAsmArguments = new int[4];
                     gaussBlurAsmArguments[0] = bitmap.Width;
                     gaussBlurAsmArguments[1] = bitmap.Height;
                     gaussBlurAsmArguments[2] = bmpData.Stride;
                     gaussBlurAsmArguments[3] = kernelSize;
-                    float testRet = gaussBlurAsm(bmpData.Scan0, gaussBlurAsmArguments, sigma);
-                    labelAsmTestResult.Text = $"retVal = {testRet} | {kernelSize} | {sigma}";
+
+                    
+
+                    BitmapData copyBmpData = copyBitmap.LockBits(
+                        new Rectangle(0, 0, copyBitmap.Width, copyBitmap.Height),
+                        ImageLockMode.ReadWrite,
+                        PixelFormat.Format24bppRgb);
+
+                    float a = createGaussianKernel(kernelSize, sigma, kernel);
+                    labelAsmTestResult.Text = $"retVal = \n {kernel}";
+                    int testRet = gaussBlurAsm(bmpData.Scan0, gaussBlurAsmArguments, copyBmpData.Scan0, kernel);
+                    labelAsmTestResult.Text = $"retVal = {testRet} | {kernelSize} | {sigma}  \n {string.Join(", ", kernel)}";
+
+                    copyBitmap.UnlockBits(copyBmpData);
                 }
 
                 if (radioButtonCpp.Checked) {
@@ -96,6 +112,7 @@ namespace JA_projekt_sem5 {
 
 
                 bitmap.UnlockBits(bmpData);
+                //DisplayImage(copyBitmap, processedPicture);
                 DisplayImage(bitmap, processedPicture);
             }
         }

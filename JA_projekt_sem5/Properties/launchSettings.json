@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "JA_projekt_sem5": {
+      "commandName": "Project",
+      "nativeDebugging": true
+    }
+  }
+}
