@@ -54,12 +54,17 @@ extern "C" __declspec(dllexport) void gaussBlur(unsigned char* bitmapData, int w
 
             for (int i = 0; i < kernelSize; ++i) {
                 int selectedX = x + (i - offset);
+                int selectedIndex = pixelIndex;
+
                 if (selectedX >= 0 && selectedX < width) {
-                    int selectedIndex = pixelIndex + ((i - offset) * 3);
-                    blurredPixelB += bitmapData[selectedIndex] * kernel[i];
-                    blurredPixelG += bitmapData[selectedIndex + 1] * kernel[i];
-                    blurredPixelR += bitmapData[selectedIndex + 2] * kernel[i];
+                    selectedIndex += ((i - offset) * 3);
+                } else {
+                    selectedIndex += ((offset - i) * 3);
                 }
+
+                blurredPixelB += bitmapData[selectedIndex] * kernel[i];
+                blurredPixelG += bitmapData[selectedIndex + 1] * kernel[i];
+                blurredPixelR += bitmapData[selectedIndex + 2] * kernel[i];
             }
 
             tempData[pixelIndex] = static_cast<unsigned char>(std::round(blurredPixelB));
@@ -77,12 +82,17 @@ extern "C" __declspec(dllexport) void gaussBlur(unsigned char* bitmapData, int w
 
             for (int i = 0; i < kernelSize; ++i) {
                 int selectedY = y + (i - offset);
+                int selectedIndex = pixelIndex;
+
                 if (selectedY >= 0 && selectedY < height) {
-                    int selectedIndex = pixelIndex + ((i - offset) * stride);
-                    blurredPixelB += tempData[selectedIndex] * kernel[i];
-                    blurredPixelG += tempData[selectedIndex + 1] * kernel[i];
-                    blurredPixelR += tempData[selectedIndex + 2] * kernel[i];
+                    selectedIndex +=  ((i - offset) * stride);
+                } else {
+                    selectedIndex += ((offset - i) * stride);
                 }
+
+                blurredPixelB += tempData[selectedIndex] * kernel[i];
+                blurredPixelG += tempData[selectedIndex + 1] * kernel[i];
+                blurredPixelR += tempData[selectedIndex + 2] * kernel[i];
             }
 
             bitmapData[pixelIndex] = static_cast<unsigned char>(std::round(blurredPixelB));
