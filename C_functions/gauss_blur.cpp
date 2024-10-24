@@ -59,7 +59,11 @@ extern "C" __declspec(dllexport) void gaussBlur(unsigned char* bitmapData, int w
                 if (selectedX >= 0 && selectedX < width) {
                     selectedIndex += ((i - offset) * 3);
                 } else {
-                    selectedIndex += ((offset - i) * 3);
+                    //if out of border we want to bounce back
+                    //[  X  X  X  X  X  X  ]
+                    //           1^ 2^ 3^ ->
+                    //              5^ 4^ <- (here else happens)
+                    selectedIndex += ((offset - i) * 3); 
                 }
 
                 blurredPixelB += bitmapData[selectedIndex] * kernel[i];
@@ -87,6 +91,10 @@ extern "C" __declspec(dllexport) void gaussBlur(unsigned char* bitmapData, int w
                 if (selectedY >= 0 && selectedY < height) {
                     selectedIndex +=  ((i - offset) * stride);
                 } else {
+                    //if out of border we want to bounce back
+                    //[  X  X  X  X  X  X  ]
+                    //           1^ 2^ 3^ ->
+                    //              5^ 4^ <- (here else happens)
                     selectedIndex += ((offset - i) * stride);
                 }
 
