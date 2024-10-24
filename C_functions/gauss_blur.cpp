@@ -5,7 +5,6 @@
 
 # define M_PI   3.14159265358979323846
 
-//TODO Remember to delete the array after usage
 double* createGaussianKernel(unsigned __int8 kernelSize, float sigma) {
 
     if (kernelSize & 0b00000001) { //is uneven
@@ -31,7 +30,7 @@ double* createGaussianKernel(unsigned __int8 kernelSize, float sigma) {
     }
 }
 
-//TODO co z czarn¹ ramk¹? Spr w ps i porównaæ. Jak dobrac odpowiedni krenel wedle rozmiaru obrazu?
+//TODO Jak dobrac odpowiedni krenel wedle rozmiaru obrazu?
 extern "C" __declspec(dllexport) void gaussBlur(unsigned char* bitmapData, int width, int height, int stride, int kernelSize, float sigma) {
     double* kernel = createGaussianKernel(kernelSize, sigma);
     if (!kernel) { return; }
@@ -56,14 +55,14 @@ extern "C" __declspec(dllexport) void gaussBlur(unsigned char* bitmapData, int w
                 int selectedX = x + (i - offset);
                 int selectedIndex = pixelIndex;
 
-                if (selectedX >= 0 && selectedX < width) {
-                    selectedIndex += ((i - offset) * 3);
+                //if out of border we want to mirror the edge 
+                //2 1 [ 1 2 ... n-1 n ] n n-1     
+                if (selectedX < 0) {
+                    selectedIndex += i * 3;
+                } else if (selectedX >= width) {
+                    selectedIndex -= i * 3;
                 } else {
-                    //if out of border we want to bounce back
-                    //[  X  X  X  X  X  X  ]
-                    //           1^ 2^ 3^ ->
-                    //              5^ 4^ <- (here else happens)
-                    selectedIndex += ((offset - i) * 3); 
+                    selectedIndex += ((i - offset) * 3);
                 }
 
                 blurredPixelB += bitmapData[selectedIndex] * kernel[i];
@@ -88,14 +87,16 @@ extern "C" __declspec(dllexport) void gaussBlur(unsigned char* bitmapData, int w
                 int selectedY = y + (i - offset);
                 int selectedIndex = pixelIndex;
 
-                if (selectedY >= 0 && selectedY < height) {
-                    selectedIndex +=  ((i - offset) * stride);
-                } else {
-                    //if out of border we want to bounce back
-                    //[  X  X  X  X  X  X  ]
-                    //           1^ 2^ 3^ ->
-                    //              5^ 4^ <- (here else happens)
-                    selectedIndex += ((offset - i) * stride);
+                //if out of border we want to mirror the edge 
+                //2 1 [ 1 2 ... n-1 n ] n n-1     
+                if (selectedY < 0) {
+                    selectedIndex += i * stride;
+                }
+                else if (selectedY >= height) {
+                    selectedIndex -= i * stride;
+                }
+                else {
+                    selectedIndex += ((i - offset) * stride);
                 }
 
                 blurredPixelB += tempData[selectedIndex] * kernel[i];
