@@ -1,95 +1,97 @@
 .data
-    n      equ 14                       ; Sta?a rozmiaru tablicy
-    one_double REAL8 1.0                ; Definicja zmiennej double 1.0
+    n           equ 14                          ; Array size constant
+    one_double  REAL8 1.0                       ; Definition of double variable 1.0
 
-    testTabX REAL8 16 dup(0.0)          ; Tablica typu double na wyniki exp(x)
-    testTabN DWORD 16 dup(0)            ; Tablica int na silnie
-    x REAL8 2.7                         ; Parametr x dla expAsm
-    xf dd 2.7                           ; Parametr x dla expAsm
-    two REAL8 2.0                       ; Warto?? 2.0 do mno?enia
-    pi      dd 3.14159265358979323846   ; Stała Pi jako wartość typu float (32-bit)
-    one     dd 1.0 
+    testTabX    REAL8 16 dup(0.0)               ; Double array for exp(x) results
+    testTabN    DWORD 16 dup(0)                 ; Int array for factorial
+    x           REAL8 2.7                       ; Parameter x for expAsm
+    xf          dd 2.7                          ; Parameter x for expAsm
+    two         REAL8 2.0                       ; Value 2.0 for multiplication
+    pi          dd 3.14159265358979323846       ; Constant Pi as a float (32-bit)
+    one         dd 1.0 
     neg_one     dd -1.0 
 .code
 ; xmm0 - x (float)
 ; RDX - pointer to tabX (double array)
 ; R8  - pointer to tabN (int array)
 expAsm proc
-    ; Zapisz stan rejestrów ogólnego przeznaczenia
+; Save the state of general purpose registers
     push rbx
     push rax
     push rdi
     push rsi
 
-    ; Zapisz stan rejestrów zmiennoprzecinkowych (XMM0 - XMM2)
-    sub rsp, 32                  ; Zarezerwuj miejsce na 2 rej 128-bitowe
-    movdqu [rsp], xmm1           ; Zapisz xmm0
-    movdqu [rsp+16], xmm2        ; Zapisz xmm1
 
-    ; Operacje na tabX - Obliczanie pot?g x (e^x)
-    lea rdi, [testTabX]         ; Wczytaj wska?nik na tabX do rejestru RDI
-    xor rbx, rbx                ; Ustaw RBX (indeks) na 0
-    cvtss2sd xmm0, xmm0         ; Konwertuj float na double (xmm0)
-    movsd xmm1, xmm0            ; Przechowaj x w xmm1
-    movsd xmm0, [one_double]    ; Za?aduj 1.0 do xmm0 (double)
-    movsd qword ptr [rdi], xmm0 ; Zapisz warto?? double w pami?ci tabX[0]
+; Save floating point registers (XMM0 - XMM2)
+    sub rsp, 32                  ; Reserve space for 2 128-bit registers
+    movdqu [rsp], xmm1           ; Save xmm0
+    movdqu [rsp+16], xmm2        ; Save xmm1
 
-    ; Pot?gowanie (e^x) z uwzgl?dnieniem silni
+
+; TabX operations - Calculating powers of x (e^x)
+    lea rdi, [testTabX]         ; Load the pointer to tabX into the RDI register
+    xor rbx, rbx                ; Set RBX (index) to 0
+    cvtss2sd xmm0, xmm0         ; Convert float to double (xmm0)
+    movsd xmm1, xmm0            ; Store x in xmm1
+    movsd xmm0, [one_double]    ; Load 1.0 into xmm0 (double)
+    movsd qword ptr [rdi], xmm0 ; Store the double value in tabX[0]
+
+; Exponentiation (e^x) with factorial
 x_powers:
-    cmp rbx, n                              ; Sprawd?, czy RBX (indeks) nie przekracza rozmiaru tablicy
-    je enf_of_x_powers                      ; Je?eli tak, zako?cz p?tl?
-    inc rbx                                 ; Zwi?ksz indeks
-    mulsd xmm0, xmm1                        ; Pomn�? xmm0 przez x (x = RCX)
-    ; Wstawienie warto?ci do tabX
-    movsd qword ptr [rdi + rbx * 8], xmm0   ; Zapisz wynik do tabX[rbx]
-    jmp x_powers                            ; Powr�? do p?tli
+    cmp rbx, n                              ; Check if RBX (index) does not exceed the size of the array
+    je enf_of_x_powers                      ; If so, end the loop
+    inc rbx                                 ; Increment the index
+    mulsd xmm0, xmm1                        ; Multiply xmm0 by x (x = RCX)
+; Insert the value into tabX
+    movsd qword ptr [rdi + rbx * 8], xmm0   ; Write the result to tabX[rbx]
+    jmp x_powers                            ; loop back
 
 enf_of_x_powers:
-    ; Operacje na tabN - Obliczanie n!
-    lea rsi, [testTabN]             ; Wczytaj wska?nik na tabN do rejestru RSI
+; TabN operations - Calculating n!
+    lea rsi, [testTabN]             ; Read the tabN pointer into the RSI register
     mov dword ptr [rsi], 1          ; tabN[0] = 1
-    xor rbx, rbx                    ; Ustaw RBX (indeks) na 0
-    mov rax, 1                      ;rax = 1 (pierwszy element)
+    xor rbx, rbx                    ; Set RBX (index) to 0
+    mov rax, 1                      ; rax = 1 (first element)
 
 n_factorial:
-    cmp rbx, n                          ; Sprawd?, czy RBX (indeks) nie przekracza rozmiaru tablicy
-    je enf_of_n_factorial               ; Je?eli tak, zako?cz p?tl?
+    cmp rbx, n                          ; Check if RBX (index) does not exceed the size of the array
+    je enf_of_n_factorial               ; If so, exit the loop
     inc rbx 
-    imul rax, rbx                       ; Pomn�? rax przez 1, 2, 3 ...
-    mov dword ptr [rsi + rbx * 4], eax  ; Zapisz wynik do tablicy tabN[rbx]
-    jmp n_factorial                     ; Powr�? do p?tli
+    imul rax, rbx                       ; Multiply rax by 1, 2, 3 ...
+    mov dword ptr [rsi + rbx * 4], eax  ; Store the result in the array tabN[rbx]
+    jmp n_factorial                     ; loop back
 
 enf_of_n_factorial:
     xor rbx, rbx            ; Counter
-    pxor xmm2, xmm2         ; Wyzeruj xmm2 (suma)
+    pxor xmm2, xmm2         ; Reset xmm2 (sum)
 
 sum_loop:
-    ; Operacja sum += tabX[i] / tabN[i]
-    cmp rbx, n              ; Sprawd? czy RBX (indeks) nie przekracza rozmiaru tablicy
-    je end_sum              ; Je?eli tak, zako?cz p?tl?
+; Operation sum += tab[i] / tab[i] 
+    cmp rbx, n              ; Check if RBX (index) does not exceed the size of the array
+    je end_sum              ; If so, end the loop
 
-    movsd xmm0, qword ptr [rdi + rbx * 8]       ; Za?aduj tabX[i] do xmm0
-    cvtsi2sd xmm1, dword ptr [rsi + rbx * 4]    ; Za?aduj tabN[i] i konwertuj na double
+    movsd xmm0, qword ptr [rdi + rbx * 8]       ; Load tabX[i] into xmm0
+    cvtsi2sd xmm1, dword ptr [rsi + rbx * 4]    ; Load tabN[i] and convert to double
     divsd xmm0, xmm1                            ; xmm0 = tabX[i] / double(tabN[i])
 
-    addsd xmm2, xmm0                            ; Dodaj wynik dzielenia do sumy (w xmm2)
+    addsd xmm2, xmm0                            ; Add the result of division to the sum (in xmm2)
 
-    inc rbx                                     ; Zwi?ksz indeks
-    jmp sum_loop                                ; Powr�? do p?tli
+    inc rbx                                     ; ++index
+    jmp sum_loop                                ; loop back
 
 end_sum:
-    movsd xmm0, xmm2            ; Przenie? sum? do xmm0
-    cvtsd2ss xmm0, xmm0         ; konwertuj double z powrotem na float
+    movsd xmm0, xmm2             ; Move sum to xmm0
+    cvtsd2ss xmm0, xmm0          ; convert double back to float
 
-    ; Przywracanie stanu rejestrów
-    movdqu xmm1, [rsp]           ; Przywróć xmm0
-    movdqu xmm2, [rsp+16]        ; Przywróć xmm1
-    add rsp, 32                  ; Zwolnij miejsce na stosie
+    ; Restore registers
+    movdqu xmm1, [rsp]           ; Restore xmm0
+    movdqu xmm2, [rsp+16]        ; Restore xmm1
+    add rsp, 32                  ; Free stack space
 
-    pop rsi                      ; Przywróć stan rejestru RSI
-    pop rdi                      ; Przywróć stan rejestru RDI
-    pop rax                      ; Przywróć stan rejestru RAX
-    pop rbx                      ; Przywróć stan rejestru RBX
+    pop rsi                      ; Restore RSI register
+    pop rdi                      ; Restore RDI register
+    pop rax                      ; Restore RAX register
+    pop rbx                      ; Restore RBX register
 
     ret
 expAsm endp
@@ -107,67 +109,71 @@ MyProc1 endp
 ; R8 - pointer to tabK (float array)
 ; CL - kernelSize (Byte)
 createGaussianKernel proc
-    lea rdi, [r8]              ; Za?aduj wska?nik tablicy kernel do rejestru rdi
 
-    movzx rax, cl              ; Przekonwertuj kernelSize (byte) na 64-bitow? warto?? (rax)
+
+    lea rdi, [r8]           ; Load the kernel array pointer into the rdi register 
+
+    movzx rax, cl           ; Convert kernelSize (byte) to 64-bit?// TODO chceck if needed
     mov rcx, rax
-    xor rbx, rbx                ; Ustaw indeks na 0
+    xor rbx, rbx            ; Set the index to 0
 
-    mulss xmm1, xmm1           ; sigma^2
-    movss xmm6, xmm1          ; xmm6 = sigma^2
-    addss xmm6, xmm6           ; xmm6 = 2 * sigma^2
+    mulss xmm1, xmm1        ; sigma^2
+    movss xmm6, xmm1        ; xmm6 = sigma^2
+    addss xmm6, xmm6        ; xmm6 = 2 * sigma^2
 
-    xorps xmm3, xmm3           ; Zero sum (xmm3) - będzie przechowywać sumę wyników
+    xorps xmm3, xmm3        ; Zero sum (xmm3) - will store the sum of the results
 
-    ; Ustawienie indeksu x na kernelSize / -2
-    sar rax, 1                 ; Podziel przez 2, aby uzyskać -kernelSize / 2
-    neg rax                    ; Zrób -kernelSize w rax
-    cvtsi2ss xmm4, rax         ; Załaduj x (indeks) do xmm4 jako float
 
-    movss xmm10, [one]       ; Załaduj wartość 1.0 do xmm0
+
+
+    ; Set index x to kernelSize / -2
+    sar rax, 1              ; Divide by 2 to get -kernelSize / 2
+    neg rax                 ; Make -kernelSize in rax
+    cvtsi2ss xmm4, rax      ; Load x (index) into xmm4 as float
+
+    movss xmm10, [one]      ; Load value 1.0 into xmm0
 
 fill_kernel_loop:
-    ; Oblicz Gauss 1D G(x) = exp(-x^2 / (2 * sigma^2)) / sqrt(2 * M_PI * sigma^2)
-    ; Oblicz x^2
+; Calculate Gauss 1D G(x) = exp(-x^2 / (2 * sigma^2)) / sqrt(2 * M_PI * sigma^2)
+; Calculate x^2
     movss xmm5, xmm4
     mulss xmm5, xmm5           ; xmm5 = x^2
 
-    ; Oblicz -x^2 / (2 * sigma^2)
+    ; -x^2 / (2 * sigma^2)
     divss xmm5, xmm6           ; xmm5 = x^2 / (2 * sigma^2)
 
     movss xmm0, [neg_one]
     mulss xmm5, xmm0           ; xmm5 = -x^2 / (2 * sigma^2)
  
-    ; Oblicz exp(-x^2 / (2 * sigma^2))
+    ; exp(-x^2 / (2 * sigma^2))
     movss xmm0, xmm5
 
 
-    call expAsm                   ; wywołaj funkcję exp, wynik w xmm0
+    call expAsm                   ; call exp function, result in xmm0
 
-    ; Oblicz sqrt(2 * M_PI * sigma^2)
-    movss xmm8, dword ptr [pi] ; Załaduj wartość M_PI
-    mulss xmm8, xmm6           ; xmm8 = PI * (2 * sigma^2) 
-    sqrtss xmm8, xmm8         ; xmm8 = sqrt(2 * sigma^2 * M_PI)
+    ; sqrt(2 * M_PI * sigma^2)
+    movss xmm8, dword ptr [pi]  ; Load M_PI value
+    mulss xmm8, xmm6            ; xmm8 = M_PI * (2 * sigma^2) 
+    sqrtss xmm8, xmm8           ; xmm8 = sqrt(2 * sigma^2 * M_PI)
 
-    ; Oblicz G(x) = exp(-x^2 / (2 * sigma^2)) / sqrt(2 * M_PI * sigma^2)
+    ; G(x) = exp(-x^2 / (2 * sigma^2)) / sqrt(2 * M_PI * sigma^2)
     divss xmm0, xmm8           ; xmm0 = G(x)
 
-    ; Wstaw wynik do tablicy kernel[i]
-    
-    movss dword ptr [rdi + rbx * 4], xmm0 ; Wpisz wynik do kernel[rcx]
+; Insert the result into the kernel[i] array 
+    movss dword ptr [rdi + rbx * 4], xmm0 ; Write the result to kernel[rcx]
 
     addss xmm3, xmm0           ; sum += G(x)
 
     addss xmm4, xmm10        ; xmm4 + 1
     inc rbx
     cmp rbx, rcx
-    jl fill_kernel_loop        ; Jeżeli i < kernelSize, powróć do pętli
+    jl fill_kernel_loop        ; If i < kernelSize, loop back
 
 
-    xor rbx, rbx                ; Ustaw indeks na 0
-    ; ret
+    xor rbx, rbx                ; Set index as 0
+
 normalize_kernel_loop:
-    ; Normalizuj kernel
+; Normalize kernel
     movss xmm0, dword ptr [rdi + rbx * 4]
     divss xmm0, xmm3           ; kernel[i] /= sum
     movss dword ptr [rdi + rbx * 4], xmm0
@@ -268,8 +274,8 @@ y_loop:
 x_loop:
     cmp  rdx, r8                 ; if (x >= width), end loop
     jge  end_x_loop
-    ; TODO może być mul zmainst imul
-    ; Oblicz index piksela (pixelIndex = y * stride + x * 3)
+    ; TODO may be mul instead of imul?
+    ; Calculate pixel index (pixelIndex = y * stride + x * 3)
     mov   r12, rcx               ; r12 = y
     imul  r12, r10               ; r12 = y * stride
     imul  rbx, rdx, 3            ; rbx = x * 3
@@ -280,7 +286,7 @@ x_loop:
     xorps xmm0, xmm0    ; blurredPixels (only 3 so 1 will be ignorred)
     xor   r13, r13      ; i
 i_loop:
-    cmp  r13, r11                ; if (i >= kernelSize), zakończ pętlę I ->  (i < kernelSize)
+    cmp  r13, r11                ; if (i >= kernelSize), end I loop ->  (i < kernelSize)
     jge  end_i_loop
     mov  rbx, r13                ; rbx = i;
     sub  rbx, r14                ; rbx = i - offset
@@ -299,27 +305,27 @@ i_loop:
 
     ; get bytes
     ; xmm3 = kerI kerI kerI kerI 
-    vbroadcastss xmm3, dword ptr [rdi + r13 * 4]      ; Załaduj jedną wartość float (kernel[i]) i umieść ją we wszystkich 4 slotach xmm0
+    vbroadcastss xmm3, dword ptr [rdi + r13 * 4]      ; Load one float value (kernel[i]) and put it in all 4 xmm0 slots
     
     ; xmm1 = xxxx rImg gImg bImg 
-    movzx ebx, byte ptr [rsi + rbx]     ; Załaduj i rozszerz byte1 na 32-bitowy rejestr eax
-    cvtsi2ss xmm1, ebx                  ; Konwertuj eax (32-bitowy int) na float i umieść w xmm1
+    movzx ebx, byte ptr [rsi + rbx]     ; Load and expand byte1 into the 32-bit eax register
+    cvtsi2ss xmm1, ebx                  ; Convert eax (32bit int) to float and put it in xmm1
 
     movzx ebx, byte ptr [rsi + rbx + 1]     
     cvtsi2ss xmm2, ebx 
-    insertps xmm1, xmm2, 16             ; Wstaw float z xmm2 do xmm1 w drugim elemencie (offset 0x10)
+    insertps xmm1, xmm2, 16             ; Insert float from xmm2 into xmm1 in second slot (offset 0x10)
 
     
     movzx ebx, byte ptr [rsi + rbx + 2]     
     cvtsi2ss xmm2, ebx  
     insertps xmm1, xmm2, 32 
 
-    mulps xmm1, xmm3                    ; xmm1 = xmm1 * xmm3 (mnoży wszystkie elementy w pakietach)
+    mulps xmm1, xmm3                    ; xmm1 = xmm1 * xmm3 (multiplies all elements in the packets)
     addps xmm0, xmm1                    ; xmm0 = xmm0 + xmm1 
 
 i_skip:
     inc r13                        ; i++
-    jmp i_loop                     ; powrót do pętli i
+    jmp i_loop                     ; back to I loop
 
 
     
@@ -327,8 +333,8 @@ i_skip:
 end_i_loop:
     ; save blured pixel
     ; 1. Extract 1st value from xmm0
-    cvttss2si eax, xmm0                 ; Konwersja float -> int
-    mov byte ptr [r15 + r12], al        ; Zapisz wynik jako bajt
+    cvttss2si eax, xmm0                 ; Conversion float -> int
+    mov byte ptr [r15 + r12], al        ; Save the result as a byte
 
     ; 2. Extract 2nd value from xmm0
     psrldq xmm0, 4                      ; byte shift [3,2,1,0] --> [X,3,2,1]
@@ -341,11 +347,11 @@ end_i_loop:
     mov byte ptr [r15 + r12 + 2], al 
 
     inc rdx                        ; x++
-    jmp x_loop                     ; powrót do pętli X
+    jmp x_loop                     ; back to X loop
 
 end_x_loop:
     inc rcx                        ; y++
-    jmp y_loop                     ; powrót do pętli Y
+    jmp y_loop                     ; back to Y loop
 
 end_y_loop:
 
@@ -362,8 +368,8 @@ y_loop_2nd:
 x_loop_2nd:
     cmp  rdx, r8                 ; if (x >= width), end loop
     jge  end_x_loop_2nd
-    ; TODO może być mul zmainst imul
-    ; Oblicz index piksela (pixelIndex = y * stride + x * 3)
+    ; TODO may be mul instead of imul?
+    ; Calculate pixel index (pixelIndex = y * stride + x * 3)
     mov   r12, rcx               ; r12 = y
     imul  r12, r10               ; r12 = y * stride
     imul  rbx, rdx, 3            ; rbx = x * 3
@@ -374,7 +380,7 @@ x_loop_2nd:
     xorps xmm0, xmm0    ; blurredPixels (only 3 so 1 will be ignorred)
     xor   r13, r13      ; i
 i_loop_2nd: ;TODO x y swap
-    cmp  r13, r11                ; if (i >= kernelSize), zakończ pętlę I ->  (i < kernelSize)
+    cmp  r13, r11                ; if (i >= kernelSize), end I loop ->  (i < kernelSize)
     jge  end_i_loop_2nd
     mov  rbx, r13                ; rbx = i;
     sub  rbx, r14                ; rbx = i - offset
@@ -393,27 +399,27 @@ i_loop_2nd: ;TODO x y swap
 
     ; get bytes
     ; xmm3 = kerI kerI kerI kerI 
-    vbroadcastss xmm3, dword ptr [rdi + r13 * 4]      ; Załaduj jedną wartość float (kernel[i]) i umieść ją we wszystkich 4 slotach xmm0
+    vbroadcastss xmm3, dword ptr [rdi + r13 * 4]      ; Load one float value (kernel[i]) and put it in all 4 xmm0 slots
     
     ; xmm1 = xxxx rImg gImg bImg 
-    movzx ebx, byte ptr [r15 + rbx]     ; Załaduj i rozszerz byte1 na 32-bitowy rejestr eax
-    cvtsi2ss xmm1, ebx                  ; Konwertuj eax (32-bitowy int) na float i umieść w xmm1
+    movzx ebx, byte ptr [r15 + rbx]     ; Load and expand byte1 into the 32-bit eax register
+    cvtsi2ss xmm1, ebx                  ; Convert eax (32bit int) to float and put it in xmm1
 
     movzx ebx, byte ptr [r15 + rbx + 1]     
     cvtsi2ss xmm2, ebx 
-    insertps xmm1, xmm2, 16             ; Wstaw float z xmm2 do xmm1 w drugim elemencie (offset 0x10)
+    insertps xmm1, xmm2, 16             ; Insert float from xmm2 into xmm1 in second slot (offset 0x10)
 
     
     movzx ebx, byte ptr [r15 + rbx + 2]     
     cvtsi2ss xmm2, ebx  
     insertps xmm1, xmm2, 32 
 
-    mulps xmm1, xmm3                    ; xmm1 = xmm1 * xmm3 (mnoży wszystkie elementy w pakietach)
+    mulps xmm1, xmm3                    ; xmm1 = xmm1 * xmm3 (multiplies all elements in the packets)
     addps xmm0, xmm1                    ; xmm0 = xmm0 + xmm1 
 
 i_skip_2nd:
     inc r13                        ; i++
-    jmp i_loop_2nd                     ; powrót do pętli i
+    jmp i_loop_2nd                 ; back to I loop
 
 
     
@@ -421,8 +427,8 @@ i_skip_2nd:
 end_i_loop_2nd:
     ; save blured pixel
     ; 1. Extract 1st value from xmm0
-    cvttss2si eax, xmm0                 ; Konwersja float -> int
-    mov byte ptr [rsi + r12], al        ; Zapisz wynik jako bajt
+    cvttss2si eax, xmm0                 ; Conversion float -> int
+    mov byte ptr [rsi + r12], al        ; Save the result as a byte
 
     ; 2. Extract 2nd value from xmm0
     psrldq xmm0, 4                      ; byte shift [3,2,1,0] --> [X,3,2,1]
@@ -435,11 +441,11 @@ end_i_loop_2nd:
     mov byte ptr [rsi + r12 + 2], al 
 
     inc rdx                        ; x++
-    jmp x_loop_2nd                     ; powrót do pętli X
+    jmp x_loop_2nd                 ; back to X loop
 
 end_x_loop_2nd:
     inc rcx                        ; y++
-    jmp y_loop_2nd                     ; powrót do pętli Y
+    jmp y_loop_2nd                 ; back to Y loop
 
 end_y_loop_2nd:
     ; free memeory 
