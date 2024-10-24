@@ -301,22 +301,22 @@ i_loop:
     
     imul rax, 3                 ;((i - offset) * 3)
     mov  rbx, r12               ; rbx = pixelIndex
-    add  rbx, rax               ; rbx = selectedIndex = pixelIndex + ((i - offset) * 3)
+    add  rax, rbx               ; rax = selectedIndex = pixelIndex + ((i - offset) * 3)
 
     ; get bytes
     ; xmm3 = kerI kerI kerI kerI 
     vbroadcastss xmm3, dword ptr [rdi + r13 * 4]      ; Load one float value (kernel[i]) and put it in all 4 xmm0 slots
     
     ; xmm1 = xxxx rImg gImg bImg 
-    movzx ebx, byte ptr [rsi + rbx]     ; Load and expand byte1 into the 32-bit eax register
+    movzx ebx, byte ptr [rsi + rax]     ; Load and expand byte1 into the 32-bit eax register
     cvtsi2ss xmm1, ebx                  ; Convert eax (32bit int) to float and put it in xmm1
 
-    movzx ebx, byte ptr [rsi + rbx + 1]     
+    movzx ebx, byte ptr [rsi + rax + 1]     
     cvtsi2ss xmm2, ebx 
     insertps xmm1, xmm2, 16             ; Insert float from xmm2 into xmm1 in second slot (offset 0x10)
 
     
-    movzx ebx, byte ptr [rsi + rbx + 2]     
+    movzx ebx, byte ptr [rsi + rax + 2]     
     cvtsi2ss xmm2, ebx  
     insertps xmm1, xmm2, 32 
 
@@ -331,7 +331,7 @@ i_skip:
     
 
 end_i_loop:
-    ; save blured pixel
+    ; save blured pixel in temp
     ; 1. Extract 1st value from xmm0
     cvttss2si eax, xmm0                 ; Conversion float -> int
     mov byte ptr [r15 + r12], al        ; Save the result as a byte
@@ -395,22 +395,22 @@ i_loop_2nd: ;TODO x y swap
     
     imul rax, r10               ; ((i - offset) * stride)
     mov  rbx, r12               ; rbx = pixelIndex
-    add  rbx, rax               ; rbx = selectedIndex = pixelIndex + ((i - offset) * stride)
+    add  rax, rbx               ; rbx = selectedIndex = pixelIndex + ((i - offset) * stride)
 
     ; get bytes
     ; xmm3 = kerI kerI kerI kerI 
     vbroadcastss xmm3, dword ptr [rdi + r13 * 4]      ; Load one float value (kernel[i]) and put it in all 4 xmm0 slots
     
-    ; xmm1 = xxxx rImg gImg bImg 
-    movzx ebx, byte ptr [r15 + rbx]     ; Load and expand byte1 into the 32-bit eax register
+    ; xmm1 = xxxx rTImg gTImg bTImg 
+    movzx ebx, byte ptr [r15 + rax]     ; Load and expand byte1 into the 32-bit eax register
     cvtsi2ss xmm1, ebx                  ; Convert eax (32bit int) to float and put it in xmm1
 
-    movzx ebx, byte ptr [r15 + rbx + 1]     
+    movzx ebx, byte ptr [r15 + rax + 1]     
     cvtsi2ss xmm2, ebx 
     insertps xmm1, xmm2, 16             ; Insert float from xmm2 into xmm1 in second slot (offset 0x10)
 
     
-    movzx ebx, byte ptr [r15 + rbx + 2]     
+    movzx ebx, byte ptr [r15 + rax + 2]     
     cvtsi2ss xmm2, ebx  
     insertps xmm1, xmm2, 32 
 
@@ -425,7 +425,7 @@ i_skip_2nd:
     
 
 end_i_loop_2nd:
-    ; save blured pixel
+    ; save blured pixel in Img
     ; 1. Extract 1st value from xmm0
     cvttss2si eax, xmm0                 ; Conversion float -> int
     mov byte ptr [rsi + r12], al        ; Save the result as a byte
