@@ -295,18 +295,33 @@ i_loop:
     
 
     cmp  rbx, 0                  ; if (selectedX < 0) end -> (selectedX >= 0)
-    jl   i_skip                  ; &&
+    jl   less_than_zero          ; &&
     cmp  rbx, r8                 ; if (selectedX >= width) end -> (selectedX < width)
-    jge  i_skip
+    jge  more_than_width
     
     imul rax, 3                 ;((i - offset) * 3)
     mov  rbx, r12               ; rbx = pixelIndex
     add  rax, rbx               ; rax = selectedIndex = pixelIndex + ((i - offset) * 3)
 
+    jmp continue                ; skip next code fragment (represents other case)
+
+less_than_zero:
+    imul rbx, r13, 3            ; rbx = i * 3
+    mov  rax, r12               ; rax = pixelIndex
+    add  rax, rbx               ; rax = selectedIndex = pixelIndex + (i * 3)
+
+    jmp continue                ; skip next code fragment (represents other case)
+
+more_than_width:
+    imul rbx, r13, 3            ; rbx = i * 3
+    mov  rax, r12               ; rax = pixelIndex
+    sub  rax, rbx               ; rax = selectedIndex = pixelIndex - (i * 3)
+
+continue:   
     ; get bytes
     ; xmm3 = kerI kerI kerI kerI 
     vbroadcastss xmm3, dword ptr [rdi + r13 * 4]      ; Load one float value (kernel[i]) and put it in all 4 xmm0 slots
-    
+ 
     ; xmm1 = xxxx rImg gImg bImg 
     movzx ebx, byte ptr [rsi + rax]     ; Load and expand byte1 into the 32-bit eax register
     cvtsi2ss xmm1, ebx                  ; Convert eax (32bit int) to float and put it in xmm1
@@ -323,7 +338,6 @@ i_loop:
     mulps xmm1, xmm3                    ; xmm1 = xmm1 * xmm3 (multiplies all elements in the packets)
     addps xmm0, xmm1                    ; xmm0 = xmm0 + xmm1 
 
-i_skip:
     inc r13                        ; i++
     jmp i_loop                     ; back to I loop
 
@@ -389,14 +403,31 @@ i_loop_2nd: ;TODO x y swap
     
 
     cmp  rbx, 0                  ; if (selectedY < 0) end -> (selectedY >= 0)
-    jl   i_skip_2nd              ; &&
+    jl   less_than_zero_2nd      ; &&
     cmp  rbx, r9                 ; if (selectedY >= height) end -> (selectedY < height)
-    jge  i_skip_2nd
+    jge  more_than_height_2nd
     
     imul rax, r10               ; ((i - offset) * stride)
     mov  rbx, r12               ; rbx = pixelIndex
     add  rax, rbx               ; rbx = selectedIndex = pixelIndex + ((i - offset) * stride)
 
+    jmp continue_2nd               ; skip next code fragment (represents other case)
+
+less_than_zero_2nd:
+    mov  rbx, r13               ; rbx = i
+    imul  rbx, r10              ; rbx = i * stride
+    mov  rax, r12               ; rax = pixelIndex
+    add  rax, rbx               ; rax = selectedIndex = pixelIndex + (i * stride)
+
+    jmp continue_2nd                ; skip next code fragment (represents other case)
+
+more_than_height_2nd:
+    mov  rbx, r13               ; rbx = i
+    imul  rbx, r10              ; rbx = i * stride
+    mov  rax, r12               ; rax = pixelIndex
+    sub  rax, rbx               ; rax = selectedIndex = pixelIndex - (i * stride)
+
+continue_2nd:   
     ; get bytes
     ; xmm3 = kerI kerI kerI kerI 
     vbroadcastss xmm3, dword ptr [rdi + r13 * 4]      ; Load one float value (kernel[i]) and put it in all 4 xmm0 slots

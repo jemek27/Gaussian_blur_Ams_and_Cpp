@@ -1,8 +1,7 @@
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
-using System.Security.Cryptography;
-using System.Threading.Tasks;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
+using System.Diagnostics;
+using System.Numerics;
 
 
 namespace JA_projekt_sem5 {
@@ -15,16 +14,21 @@ namespace JA_projekt_sem5 {
 
         [DllImport(@"C:\Users\jemek\source\repos\JA_projekt_sem5\x64\Debug\JAAsm.dll")]
         private static extern int gaussBlurAsm(IntPtr bitmapData, int[] packedArguments, IntPtr tempBitmapData, float[] kernel); //TODO into void
-                                                                                                         //        private static extern long gaussBlurAsm(IntPtr bitmapData, int width, int height, int stride, int kernelSize, float sigma);
+                                                                                                                                 //        private static extern long gaussBlurAsm(IntPtr bitmapData, int width, int height, int stride, int kernelSize, float sigma);
         [DllImport(@"C:\Users\jemek\source\repos\JA_projekt_sem5\x64\Debug\JAAsm.dll")]
         private static extern long ProcessBitmapAsm(IntPtr bitmapData, int width, int height, int stride);
 
-        private Bitmap bitmap;
+        private Bitmap bitmapInput;
+        private Bitmap bitmapOutput;
 
         private OpenFileDialog openFileDialog;
 
         private Byte kernelSize = 11;
         private float sigma = 4;
+
+        private long testTimeCpp = 0;
+        private long testTimeAsm = 0;
+        private int  testIterations = 1;
 
         public Form1() {
             InitializeComponent();
@@ -66,31 +70,33 @@ namespace JA_projekt_sem5 {
         private void buttonLoadPicture_Click(object sender, EventArgs e) {
 
             if (openFileDialog.ShowDialog() == DialogResult.OK) {
-                bitmap = ConvertImageToBitmap(openFileDialog.FileName);
-                DisplayImage(bitmap, inputPicture);
+                bitmapInput = ConvertImageToBitmap(openFileDialog.FileName);
+                DisplayImage(bitmapInput, inputPicture);
             }
         }
 
         private void processPictureButton_Click(object sender, EventArgs e) {
-            if (bitmap != null) {
-                
-                Bitmap copyBitmap = new Bitmap(bitmap);
+            if (bitmapInput != null) {
+                bitmapOutput = new Bitmap(bitmapInput);
+                Bitmap copyBitmap = new Bitmap(bitmapOutput);
+
+
                 // Lock the bitmap's bits to get access to its pixel data
-                BitmapData bmpData = bitmap.LockBits(
-                    new Rectangle(0, 0, bitmap.Width, bitmap.Height),
+                BitmapData bmpData = bitmapOutput.LockBits(
+                    new Rectangle(0, 0, bitmapOutput.Width, bitmapOutput.Height),
                     ImageLockMode.ReadWrite,
                     PixelFormat.Format24bppRgb);
 
-                if(radioButtonAsm.Checked) {
+                if (radioButtonAsm.Checked) {
                     float[] kernel = new float[kernelSize];
 
                     int[] gaussBlurAsmArguments = new int[4];
-                    gaussBlurAsmArguments[0] = bitmap.Width;
-                    gaussBlurAsmArguments[1] = bitmap.Height;
+                    gaussBlurAsmArguments[0] = bitmapOutput.Width;
+                    gaussBlurAsmArguments[1] = bitmapOutput.Height;
                     gaussBlurAsmArguments[2] = bmpData.Stride;
                     gaussBlurAsmArguments[3] = kernelSize;
 
-                    
+
 
                     BitmapData copyBmpData = copyBitmap.LockBits(
                         new Rectangle(0, 0, copyBitmap.Width, copyBitmap.Height),
@@ -106,14 +112,14 @@ namespace JA_projekt_sem5 {
                 }
 
                 if (radioButtonCpp.Checked) {
-                    gaussBlur(bmpData.Scan0, bitmap.Width, bitmap.Height, bmpData.Stride, kernelSize, sigma);
+                    gaussBlur(bmpData.Scan0, bitmapOutput.Width, bitmapOutput.Height, bmpData.Stride, kernelSize, sigma);
                     //ProcessBitmap(bmpData.Scan0, bitmap.Width, bitmap.Height, bmpData.Stride);
                 }
 
 
-                bitmap.UnlockBits(bmpData);
+                bitmapOutput.UnlockBits(bmpData);
                 //DisplayImage(copyBitmap, processedPicture);
-                DisplayImage(bitmap, processedPicture);
+                DisplayImage(bitmapOutput, processedPicture);
             }
         }
 
@@ -172,7 +178,158 @@ namespace JA_projekt_sem5 {
 
         private void radioButtonCpp_CheckedChanged(object sender, EventArgs e) {
             if (radioButtonCpp.Checked) {
-                radioButtonAsm.Checked = false; 
+                radioButtonAsm.Checked = false;
+            }
+        }
+
+        private void checkBoxAll_CheckedChanged(object sender, EventArgs e) {
+            if (checkBoxAll.Checked) {
+                checkBoxSmall.Checked = true;
+                checkBoxMedium.Checked = true;
+                checkBoxBig.Checked = true;
+            } else {
+                checkBoxSmall.Checked = false;
+                checkBoxMedium.Checked = false;
+                checkBoxBig.Checked = false;
+            }
+        }
+
+        private void runTestButton_Click(object sender, EventArgs e) {
+            Bitmap bitmapSmall = ConvertImageToBitmap(@"C:\Users\jemek\source\repos\JA_projekt_sem5\x64\Debug\sum-ryba-900x450.bmp");
+            Bitmap bitmapMedium = ConvertImageToBitmap(@"C:\Users\jemek\source\repos\JA_projekt_sem5\x64\Debug\krolWod.bmp");
+            Bitmap bitmapBig = ConvertImageToBitmap(@"C:\Users\jemek\source\repos\JA_projekt_sem5\x64\Debug\PXL_20240914_194829875.bmp");
+
+            Stopwatch stopwatch = new Stopwatch();
+            int counter = testIterations;
+
+            if (checkBoxSmall.Checked) {
+                while (counter > 0) {
+                    --counter;
+                    stopwatch.Start();
+                    applyGaussianBlurCpp(bitmapSmall);
+                    stopwatch.Stop();
+
+                    testTimeCpp += stopwatch.ElapsedMilliseconds;
+                    stopwatch.Restart();
+
+                    //////////////////////
+
+                    stopwatch.Start();
+                    applyGaussianBlurAsm(bitmapSmall);
+                    stopwatch.Stop();
+
+                    testTimeAsm += stopwatch.ElapsedMilliseconds;
+                    stopwatch.Restart();
+                }
+                counter = testIterations;
+            } else if (checkBoxMedium.Checked) {
+                while (counter > 0) {
+                    --counter;
+                    stopwatch.Start();
+                    applyGaussianBlurCpp(bitmapMedium);
+                    stopwatch.Stop();
+
+                    testTimeCpp += stopwatch.ElapsedMilliseconds;
+                    stopwatch.Restart();
+
+                    //////////////////////
+
+                    stopwatch.Start();
+                    applyGaussianBlurAsm(bitmapMedium);
+                    stopwatch.Stop();
+
+                    testTimeAsm += stopwatch.ElapsedMilliseconds;
+                    stopwatch.Restart();
+                }
+                counter = testIterations;
+            } else if (checkBoxBig.Checked) {
+                while (counter > 0) {
+                    --counter;
+                    stopwatch.Start();
+                    applyGaussianBlurCpp(bitmapBig);
+                    stopwatch.Stop();
+
+                    testTimeCpp += stopwatch.ElapsedMilliseconds;
+                    stopwatch.Restart();
+
+                    //////////////////////
+
+                    stopwatch.Start();
+                    applyGaussianBlurAsm(bitmapBig);
+                    stopwatch.Stop();
+
+                    testTimeAsm += stopwatch.ElapsedMilliseconds;
+                    stopwatch.Restart();
+                }
+                counter = testIterations;
+            }
+
+
+            timeCppLabel.Text = ConvertMillisecondsToTimeFormat(testTimeCpp);
+            timeAsmLabel.Text = ConvertMillisecondsToTimeFormat(testTimeAsm);
+            testTimeCpp = 0;
+            testTimeAsm = 0;
+        }
+
+        private void applyGaussianBlurCpp(Bitmap bmp) {
+            BitmapData bmpData = bmp.LockBits(
+                    new Rectangle(0, 0, bmp.Width, bmp.Height),
+                    ImageLockMode.ReadWrite,
+                    PixelFormat.Format24bppRgb);
+
+            gaussBlur(bmpData.Scan0, bmp.Width, bmp.Height, bmpData.Stride, kernelSize, sigma);
+
+            bmp.UnlockBits(bmpData);
+        }
+
+        private void applyGaussianBlurAsm(Bitmap bmp) {
+            Bitmap copyBitmap = new Bitmap(bmp);
+
+            BitmapData bmpData = bmp.LockBits(
+                new Rectangle(0, 0, bmp.Width, bmp.Height),
+                ImageLockMode.ReadWrite,
+                PixelFormat.Format24bppRgb);
+
+            float[] kernel = new float[kernelSize];
+
+            int[] gaussBlurAsmArguments = new int[4];
+            gaussBlurAsmArguments[0] = bmp.Width;
+            gaussBlurAsmArguments[1] = bmp.Height;
+            gaussBlurAsmArguments[2] = bmpData.Stride;
+            gaussBlurAsmArguments[3] = kernelSize;
+
+            BitmapData copyBmpData = copyBitmap.LockBits(
+                new Rectangle(0, 0, copyBitmap.Width, copyBitmap.Height),
+                ImageLockMode.ReadWrite,
+                PixelFormat.Format24bppRgb);
+
+            float a = createGaussianKernel(kernelSize, sigma, kernel);
+            int testRet = gaussBlurAsm(bmpData.Scan0, gaussBlurAsmArguments, copyBmpData.Scan0, kernel);
+
+            copyBitmap.UnlockBits(copyBmpData);
+            bmp.UnlockBits(bmpData);
+        }
+
+        private string ConvertMillisecondsToTimeFormat(long milliseconds) {
+
+            long minutes = milliseconds / 60000;
+            long seconds = (milliseconds % 60000) / 1000;
+            long remainingMilliseconds = milliseconds % 1000;
+
+            // Format as MM:SS:FFF
+            return $"{minutes:D2}:{seconds:D2}:{remainingMilliseconds:D3}";
+        }
+
+        private void trackBar1_Scroll(object sender, EventArgs e) {
+            labelAsmTestResult.Text = "Threads: " + trackBar1.Value.ToString();
+        }
+
+        private void iterationsTextBox_TextChanged(object sender, EventArgs e) {
+            try {
+                testIterations = Convert.ToInt32(iterationsTextBox.Text);
+                labelXTimes.Text = $"Repeat {testIterations} times";
+            } catch (FormatException ex) {
+                labelXTimes.Text = labelXTimes.Text + " Incorrect format!";
             }
         }
     }
