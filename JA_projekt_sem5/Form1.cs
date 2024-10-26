@@ -1,24 +1,26 @@
+using System.Diagnostics;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
-using System.Diagnostics;
-using System.Numerics;
+using System.Security.Cryptography;
+using System.Threading.Tasks;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 
 namespace JA_projekt_sem5 {
 
     public partial class Form1 : Form {
-        [DllImport(@"C:\Users\jemek\source\repos\JA_projekt_sem5\x64\Debug\C_functions.dll")]
+        [DllImport(@"C:\Users\Robert\source\repos\Gaussian_blur_Ams_and_Cpp\x64\Debug\C_functions.dll")]
         private static extern void ProcessBitmap(IntPtr bitmapData, int width, int height, int stride);
-        [DllImport(@"C:\Users\jemek\source\repos\JA_projekt_sem5\x64\Debug\C_functions.dll")]
+        [DllImport(@"C:\Users\Robert\source\repos\Gaussian_blur_Ams_and_Cpp\x64\Debug\C_functions.dll")]
         private static extern void gaussBlur(IntPtr bitmapData, int width, int height, int stride, int kernelSize, float sigma);
 
-        [DllImport(@"C:\Users\jemek\source\repos\JA_projekt_sem5\x64\Debug\JAAsm.dll")]
+        [DllImport(@"C:\Users\Robert\source\repos\Gaussian_blur_Ams_and_Cpp\x64\Debug\JAAsm.dll")]
         private static extern int gaussBlurAsm(IntPtr bitmapData, int[] packedArguments, IntPtr tempBitmapData, float[] kernel); //TODO into void
-                                                                                                                                 //        private static extern long gaussBlurAsm(IntPtr bitmapData, int width, int height, int stride, int kernelSize, float sigma);
-        [DllImport(@"C:\Users\jemek\source\repos\JA_projekt_sem5\x64\Debug\JAAsm.dll")]
+                                                                                                         //        private static extern long gaussBlurAsm(IntPtr bitmapData, int width, int height, int stride, int kernelSize, float sigma);
+        [DllImport(@"C:\Users\Robert\source\repos\Gaussian_blur_Ams_and_Cpp\x64\Debug\JAAsm.dll")]
         private static extern long ProcessBitmapAsm(IntPtr bitmapData, int width, int height, int stride);
 
-        private Bitmap bitmapInput;
+        private Bitmap bitmap;
         private Bitmap bitmapOutput;
 
         private OpenFileDialog openFileDialog;
@@ -28,7 +30,7 @@ namespace JA_projekt_sem5 {
 
         private long testTimeCpp = 0;
         private long testTimeAsm = 0;
-        private int  testIterations = 1;
+        private int testIterations = 1;
 
         public Form1() {
             InitializeComponent();
@@ -70,16 +72,15 @@ namespace JA_projekt_sem5 {
         private void buttonLoadPicture_Click(object sender, EventArgs e) {
 
             if (openFileDialog.ShowDialog() == DialogResult.OK) {
-                bitmapInput = ConvertImageToBitmap(openFileDialog.FileName);
-                DisplayImage(bitmapInput, inputPicture);
+                bitmap = ConvertImageToBitmap(openFileDialog.FileName);
+                DisplayImage(bitmap, inputPicture);
             }
         }
 
         private void processPictureButton_Click(object sender, EventArgs e) {
-            if (bitmapInput != null) {
-                bitmapOutput = new Bitmap(bitmapInput);
-                Bitmap copyBitmap = new Bitmap(bitmapOutput);
-
+            if (bitmap != null) {
+                bitmapOutput = new Bitmap(bitmap);
+                Bitmap copyBitmap = new Bitmap(bitmap);
 
                 // Lock the bitmap's bits to get access to its pixel data
                 BitmapData bmpData = bitmapOutput.LockBits(
@@ -87,7 +88,7 @@ namespace JA_projekt_sem5 {
                     ImageLockMode.ReadWrite,
                     PixelFormat.Format24bppRgb);
 
-                if (radioButtonAsm.Checked) {
+                if(radioButtonAsm.Checked) {
                     float[] kernel = new float[kernelSize];
 
                     int[] gaussBlurAsmArguments = new int[4];
@@ -96,7 +97,7 @@ namespace JA_projekt_sem5 {
                     gaussBlurAsmArguments[2] = bmpData.Stride;
                     gaussBlurAsmArguments[3] = kernelSize;
 
-
+                    
 
                     BitmapData copyBmpData = copyBitmap.LockBits(
                         new Rectangle(0, 0, copyBitmap.Width, copyBitmap.Height),
@@ -140,10 +141,10 @@ namespace JA_projekt_sem5 {
 
             return newImage;
         }
-        [DllImport(@"C:\Users\jemek\source\repos\JA_projekt_sem5\x64\Debug\JAAsm.dll")]
+        [DllImport(@"C:\Users\Robert\source\repos\Gaussian_blur_Ams_and_Cpp\x64\Debug\JAAsm.dll")]
 
         private static extern float expAsm(float x);//, double[] tabX, int[] tabN);
-        [DllImport(@"C:\Users\jemek\source\repos\JA_projekt_sem5\x64\Debug\JAAsm.dll")]
+        [DllImport(@"C:\Users\Robert\source\repos\Gaussian_blur_Ams_and_Cpp\x64\Debug\JAAsm.dll")]
 
         private static extern float createGaussianKernel(Byte kernelSize, float sigma, float[] kernel);
 
@@ -178,7 +179,7 @@ namespace JA_projekt_sem5 {
 
         private void radioButtonCpp_CheckedChanged(object sender, EventArgs e) {
             if (radioButtonCpp.Checked) {
-                radioButtonAsm.Checked = false;
+                radioButtonAsm.Checked = false; 
             }
         }
 
@@ -195,9 +196,9 @@ namespace JA_projekt_sem5 {
         }
 
         private void runTestButton_Click(object sender, EventArgs e) {
-            Bitmap bitmapSmall = ConvertImageToBitmap(@"C:\Users\jemek\source\repos\JA_projekt_sem5\x64\Debug\sum-ryba-900x450.bmp");
-            Bitmap bitmapMedium = ConvertImageToBitmap(@"C:\Users\jemek\source\repos\JA_projekt_sem5\x64\Debug\krolWod.bmp");
-            Bitmap bitmapBig = ConvertImageToBitmap(@"C:\Users\jemek\source\repos\JA_projekt_sem5\x64\Debug\PXL_20240914_194829875.bmp");
+            Bitmap bitmapSmall = ConvertImageToBitmap(  @"C:\Users\Robert\source\repos\Gaussian_blur_Ams_and_Cpp\x64\Debug\sum-ryba-900x450.bmp");
+            Bitmap bitmapMedium = ConvertImageToBitmap( @"C:\Users\Robert\source\repos\Gaussian_blur_Ams_and_Cpp\x64\Debug\krolWod.bmp");
+            Bitmap bitmapBig = ConvertImageToBitmap(    @"C:\Users\Robert\source\repos\Gaussian_blur_Ams_and_Cpp\x64\Debug\PXL_20240914_194829875.bmp");
 
             Stopwatch stopwatch = new Stopwatch();
             int counter = testIterations;
@@ -222,7 +223,8 @@ namespace JA_projekt_sem5 {
                     stopwatch.Restart();
                 }
                 counter = testIterations;
-            } else if (checkBoxMedium.Checked) {
+            } 
+            if (checkBoxMedium.Checked) {
                 while (counter > 0) {
                     --counter;
                     stopwatch.Start();
@@ -242,7 +244,8 @@ namespace JA_projekt_sem5 {
                     stopwatch.Restart();
                 }
                 counter = testIterations;
-            } else if (checkBoxBig.Checked) {
+            } 
+            if (checkBoxBig.Checked) {
                 while (counter > 0) {
                     --counter;
                     stopwatch.Start();

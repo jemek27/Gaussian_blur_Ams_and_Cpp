@@ -317,11 +317,11 @@ more_than_width:
     mov  rax, r12               ; rax = pixelIndex
     sub  rax, rbx               ; rax = selectedIndex = pixelIndex - (i * 3)
 
-continue:   
+continue: 
     ; get bytes
     ; xmm3 = kerI kerI kerI kerI 
     vbroadcastss xmm3, dword ptr [rdi + r13 * 4]      ; Load one float value (kernel[i]) and put it in all 4 xmm0 slots
- 
+    
     ; xmm1 = xxxx rImg gImg bImg 
     movzx ebx, byte ptr [rsi + rax]     ; Load and expand byte1 into the 32-bit eax register
     cvtsi2ss xmm1, ebx                  ; Convert eax (32bit int) to float and put it in xmm1
@@ -338,6 +338,7 @@ continue:
     mulps xmm1, xmm3                    ; xmm1 = xmm1 * xmm3 (multiplies all elements in the packets)
     addps xmm0, xmm1                    ; xmm0 = xmm0 + xmm1 
 
+i_skip:
     inc r13                        ; i++
     jmp i_loop                     ; back to I loop
 
@@ -427,7 +428,7 @@ more_than_height_2nd:
     mov  rax, r12               ; rax = pixelIndex
     sub  rax, rbx               ; rax = selectedIndex = pixelIndex - (i * stride)
 
-continue_2nd:   
+continue_2nd:  
     ; get bytes
     ; xmm3 = kerI kerI kerI kerI 
     vbroadcastss xmm3, dword ptr [rdi + r13 * 4]      ; Load one float value (kernel[i]) and put it in all 4 xmm0 slots
