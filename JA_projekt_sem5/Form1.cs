@@ -31,8 +31,10 @@ namespace JA_projekt_sem5 {
         private Byte kernelSize = 11;
         private float sigma = 4;
 
-        private long testTimeCpp = 0;
-        private long testTimeAsm = 0;
+        private long totalTestTimeCpp = 0;
+        private long totalTestTimeAsm = 0;
+        private long tempTestTimeCpp = 0;
+        private long tempTestTimeAsm = 0;
         private int testIterations = 1;
 
         public Form1() {
@@ -212,7 +214,7 @@ namespace JA_projekt_sem5 {
                     applyGaussianBlurCpp(bitmapSmall);
                     stopwatch.Stop();
 
-                    testTimeCpp += stopwatch.ElapsedMilliseconds;
+                    tempTestTimeCpp += stopwatch.ElapsedMilliseconds;
                     stopwatch.Restart();
 
                     //////////////////////
@@ -221,9 +223,13 @@ namespace JA_projekt_sem5 {
                     applyGaussianBlurAsm(bitmapSmall);
                     stopwatch.Stop();
 
-                    testTimeAsm += stopwatch.ElapsedMilliseconds;
+                    tempTestTimeAsm += stopwatch.ElapsedMilliseconds;
                     stopwatch.Restart();
                 }
+                totalTestTimeCpp += tempTestTimeCpp;
+                totalTestTimeAsm += tempTestTimeAsm;
+                tempTestTimeCpp = 0;
+                tempTestTimeAsm = 0;
                 counter = testIterations;
             } 
             if (checkBoxMedium.Checked) {
@@ -233,7 +239,7 @@ namespace JA_projekt_sem5 {
                     applyGaussianBlurCpp(bitmapMedium);
                     stopwatch.Stop();
 
-                    testTimeCpp += stopwatch.ElapsedMilliseconds;
+                    tempTestTimeCpp += stopwatch.ElapsedMilliseconds;
                     stopwatch.Restart();
 
                     //////////////////////
@@ -242,9 +248,13 @@ namespace JA_projekt_sem5 {
                     applyGaussianBlurAsm(bitmapMedium);
                     stopwatch.Stop();
 
-                    testTimeAsm += stopwatch.ElapsedMilliseconds;
+                    tempTestTimeAsm += stopwatch.ElapsedMilliseconds;
                     stopwatch.Restart();
                 }
+                totalTestTimeCpp += tempTestTimeCpp;
+                totalTestTimeAsm += tempTestTimeAsm;
+                tempTestTimeCpp = 0;
+                tempTestTimeAsm = 0;
                 counter = testIterations;
             } 
             if (checkBoxBig.Checked) {
@@ -254,7 +264,7 @@ namespace JA_projekt_sem5 {
                     applyGaussianBlurCpp(bitmapBig);
                     stopwatch.Stop();
 
-                    testTimeCpp += stopwatch.ElapsedMilliseconds;
+                    tempTestTimeCpp += stopwatch.ElapsedMilliseconds;
                     stopwatch.Restart();
 
                     //////////////////////
@@ -263,17 +273,21 @@ namespace JA_projekt_sem5 {
                     applyGaussianBlurAsm(bitmapBig);
                     stopwatch.Stop();
 
-                    testTimeAsm += stopwatch.ElapsedMilliseconds;
+                    tempTestTimeAsm += stopwatch.ElapsedMilliseconds;
                     stopwatch.Restart();
                 }
+                totalTestTimeCpp += tempTestTimeCpp;
+                totalTestTimeAsm += tempTestTimeAsm;
+                tempTestTimeCpp = 0;
+                tempTestTimeAsm = 0;
                 counter = testIterations;
             }
 
 
-            timeCppLabel.Text = ConvertMillisecondsToTimeFormat(testTimeCpp);
-            timeAsmLabel.Text = ConvertMillisecondsToTimeFormat(testTimeAsm);
-            testTimeCpp = 0;
-            testTimeAsm = 0;
+            timeCppLabel.Text = ConvertMillisecondsToTimeFormat(totalTestTimeCpp);
+            timeAsmLabel.Text = ConvertMillisecondsToTimeFormat(totalTestTimeAsm);
+            totalTestTimeCpp = 0;
+            totalTestTimeAsm = 0;
         }
 
         private void applyGaussianBlurCpp(Bitmap bmp) {
@@ -335,6 +349,18 @@ namespace JA_projekt_sem5 {
                 labelXTimes.Text = $"Repeat {testIterations} times";
             } catch (FormatException ex) {
                 labelXTimes.Text = labelXTimes.Text + " Incorrect format!";
+            }
+        }
+
+        private void SaveToCsv(string filePath, long cppTime, long asmTime) {
+            bool fileExists = File.Exists(filePath);
+
+            using (StreamWriter writer = new StreamWriter(filePath, append: true)) {
+                if (!fileExists) {
+                    writer.WriteLine("Time-cpp-ms,Time-asm-ms");
+                }
+
+                writer.WriteLine($"{cppTime},{asmTime}");
             }
         }
     }
