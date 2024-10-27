@@ -56,11 +56,12 @@ extern "C" __declspec(dllexport) void gaussBlur(unsigned char* bitmapData, int w
                 int selectedIndex = pixelIndex;
 
                 //if out of border we want to mirror the edge 
-                //2 1 [ 1 2 ... n-1 n ] n n-1     
+                //-2 -1 [ 0 1 ... n-1 n ] n+1 n+2     
+                // 1  0 [ 0 1 ... n-1 n ] n   n-1    
                 if (selectedX < 0) {
-                    selectedIndex += i * 3;
+                    selectedIndex += (1 + selectedX) * -3; //(1 + selectedX) * -1 * 3;
                 } else if (selectedX >= width) {
-                    selectedIndex -= i * 3;
+                    selectedIndex += (width - 1 - selectedX) * 3;
                 } else {
                     selectedIndex += ((i - offset) * 3);
                 }
@@ -88,16 +89,18 @@ extern "C" __declspec(dllexport) void gaussBlur(unsigned char* bitmapData, int w
                 int selectedIndex = pixelIndex;
 
                 //if out of border we want to mirror the edge 
-                //2 1 [ 1 2 ... n-1 n ] n n-1     
+                //-2 -1 [ 0 1 ... n-1 n ] n+1 n+2     
+                // 1  0 [ 0 1 ... n-1 n ] n   n-1    
                 if (selectedY < 0) {
-                    selectedIndex += i * stride;
+                    selectedIndex += (1 + selectedY) * -1 * stride; //(1 + selectedX) * -1 * 3;
                 }
                 else if (selectedY >= height) {
-                    selectedIndex -= i * stride;
+                    selectedIndex += (height - 1 - selectedY) * stride;
                 }
-                else {
+                else { 
                     selectedIndex += ((i - offset) * stride);
                 }
+
 
                 blurredPixelB += tempData[selectedIndex] * kernel[i];
                 blurredPixelG += tempData[selectedIndex + 1] * kernel[i];

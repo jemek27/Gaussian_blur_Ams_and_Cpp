@@ -194,8 +194,8 @@ createGaussianKernel endp
     ;   - r9; *kernel
  ;///////////////  
     ; Uzywane rejestry:
-    ; rax   tempVal
-    ; rbx   tempVal, pixelIndex -> selectedIndex
+    ; rax   tempVal, selectedIndex
+    ; rbx   tempVal, pixelIndex 
     ; rcx   x
     ; rdx   y
     ; r8    width   
@@ -205,7 +205,7 @@ createGaussianKernel endp
     ; r12   pixelIndex
     ; r13   i (kernel index)
     ; r14   offset = kernelSize / 2; // we consider the middle index as 0 e.g. [-2, -1, 0, 1, 2]
-    ; r15   tempVal
+    ; r15   *tempData
     ; rsi   *bitmapData
     ; rdi   *kernel
     ;
@@ -290,8 +290,8 @@ i_loop:
     jge  end_i_loop
     mov  rbx, r13                ; rbx = i;
     sub  rbx, r14                ; rbx = i - offset
-    mov  rax, rbx                ; (i - offset) will reuse in a moment
-    add  rbx, rdx                ; rbx = (i - offset) + x
+    mov  rax, rbx                ; (i - offset) will reuse in a moment line 303
+    add  rbx, rdx                ; rbx = selectedX = (i - offset) + x
     
 
     cmp  rbx, 0                  ; if (selectedX < 0) end -> (selectedX >= 0)
@@ -305,17 +305,25 @@ i_loop:
 
     jmp continue                ; skip next code fragment (represents other case)
 
+;if out of border we want to mirror the edge 
+;-2 -1 [ 0 1 ... n-1 n ] n+1 n+2     
+; 1  0 [ 0 1 ... n-1 n ] n   n-1    
+
 less_than_zero:
-    imul rbx, r13, 3            ; rbx = i * 3
+    add  rbx, 1                 ; 1 + selectedX
+    imul rbx, 3                 ; (1 + selectedX) * 3
+    neg  rbx                    ; (1 + selectedX) * -3
     mov  rax, r12               ; rax = pixelIndex
-    add  rax, rbx               ; rax = selectedIndex = pixelIndex + (i * 3)
+    add  rax, rbx               ;selectedIndex += (1 + selectedX) * -3;
 
     jmp continue                ; skip next code fragment (represents other case)
 
 more_than_width:
-    imul rbx, r13, 3            ; rbx = i * 3
-    mov  rax, r12               ; rax = pixelIndex
-    sub  rax, rbx               ; rax = selectedIndex = pixelIndex - (i * 3)
+    add  rbx, 1                 ; 1 + selectedX
+    mov  rax, r8                ; rax = width
+    sub  rax, rbx               ; rax = width - 1 - selectedX = width - (1 + selectedX)
+    imul rax, 3                 ; rax = (width - 1 - selectedX) * 3
+    add  rax, r12               ; rax = selectedIndex += (width - 1 - selectedX) * 3;
 
 continue: 
     ; get bytes
@@ -338,7 +346,7 @@ continue:
     mulps xmm1, xmm3                    ; xmm1 = xmm1 * xmm3 (multiplies all elements in the packets)
     addps xmm0, xmm1                    ; xmm0 = xmm0 + xmm1 
 
-i_skip:
+
     inc r13                        ; i++
     jmp i_loop                     ; back to I loop
 
@@ -413,20 +421,23 @@ i_loop_2nd: ;TODO x y swap
     add  rax, rbx               ; rbx = selectedIndex = pixelIndex + ((i - offset) * stride)
 
     jmp continue_2nd               ; skip next code fragment (represents other case)
-
+;TODO tu tyż przerobić
 less_than_zero_2nd:
-    mov  rbx, r13               ; rbx = i
-    imul  rbx, r10              ; rbx = i * stride
+    add  rbx, 1                 ; 1 + selectedY
+    imul rbx, r10               ; (1 + selectedY) * stride
+    neg  rbx                    ; (1 + selectedY) * -stride
     mov  rax, r12               ; rax = pixelIndex
-    add  rax, rbx               ; rax = selectedIndex = pixelIndex + (i * stride)
+    add  rax, rbx               ;selectedIndex += (1 + selectedX) * -stride;
 
     jmp continue_2nd                ; skip next code fragment (represents other case)
 
 more_than_height_2nd:
-    mov  rbx, r13               ; rbx = i
-    imul  rbx, r10              ; rbx = i * stride
-    mov  rax, r12               ; rax = pixelIndex
-    sub  rax, rbx               ; rax = selectedIndex = pixelIndex - (i * stride)
+
+    add  rbx, 1                 ; 1 + selectedY
+    mov  rax, r9                ; rax = height
+    sub  rax, rbx               ; rax = height - 1 - selectedY = height - (1 + selectedy)
+    imul rax, r10               ; rax = (height - 1 - selectedY) * stride
+    add  rax, r12               ; rax = selectedIndex += (width - 1 - selectedY) * stride;
 
 continue_2nd:  
     ; get bytes

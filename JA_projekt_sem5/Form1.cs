@@ -5,19 +5,22 @@ using System.Security.Cryptography;
 using System.Threading.Tasks;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
-
+//TODO 
 namespace JA_projekt_sem5 {
 
     public partial class Form1 : Form {
-        [DllImport(@"C:\Users\Robert\source\repos\Gaussian_blur_Ams_and_Cpp\x64\Debug\C_functions.dll")]
+        const string dllPath = "C:\\Users\\Robert\\source\\repos\\Gaussian_blur_Ams_and_Cpp\\x64\\Debug\\"; //Debug Release
+        [DllImport(dllPath + "C_functions.dll")]
         private static extern void ProcessBitmap(IntPtr bitmapData, int width, int height, int stride);
-        [DllImport(@"C:\Users\Robert\source\repos\Gaussian_blur_Ams_and_Cpp\x64\Debug\C_functions.dll")]
+        [DllImport(dllPath + "C_functions.dll")]
         private static extern void gaussBlur(IntPtr bitmapData, int width, int height, int stride, int kernelSize, float sigma);
 
-        [DllImport(@"C:\Users\Robert\source\repos\Gaussian_blur_Ams_and_Cpp\x64\Debug\JAAsm.dll")]
+        [DllImport(dllPath + "JAAsm.dll")]
+        private static extern float createGaussianKernel(Byte kernelSize, float sigma, float[] kernel);
+        [DllImport(dllPath + "JAAsm.dll")]
         private static extern int gaussBlurAsm(IntPtr bitmapData, int[] packedArguments, IntPtr tempBitmapData, float[] kernel); //TODO into void
                                                                                                          //        private static extern long gaussBlurAsm(IntPtr bitmapData, int width, int height, int stride, int kernelSize, float sigma);
-        [DllImport(@"C:\Users\Robert\source\repos\Gaussian_blur_Ams_and_Cpp\x64\Debug\JAAsm.dll")]
+        [DllImport(dllPath + "JAAsm.dll")]
         private static extern long ProcessBitmapAsm(IntPtr bitmapData, int width, int height, int stride);
 
         private Bitmap bitmap;
@@ -141,12 +144,10 @@ namespace JA_projekt_sem5 {
 
             return newImage;
         }
-        [DllImport(@"C:\Users\Robert\source\repos\Gaussian_blur_Ams_and_Cpp\x64\Debug\JAAsm.dll")]
+        [DllImport(dllPath + "JAAsm.dll")]
 
         private static extern float expAsm(float x);//, double[] tabX, int[] tabN);
-        [DllImport(@"C:\Users\Robert\source\repos\Gaussian_blur_Ams_and_Cpp\x64\Debug\JAAsm.dll")]
 
-        private static extern float createGaussianKernel(Byte kernelSize, float sigma, float[] kernel);
 
         private void buttonTestAsm_Click(object sender, EventArgs e) {
             double[] tabX = new double[14];
@@ -196,9 +197,10 @@ namespace JA_projekt_sem5 {
         }
 
         private void runTestButton_Click(object sender, EventArgs e) {
-            Bitmap bitmapSmall = ConvertImageToBitmap(  @"C:\Users\Robert\source\repos\Gaussian_blur_Ams_and_Cpp\x64\Debug\sum-ryba-900x450.bmp");
-            Bitmap bitmapMedium = ConvertImageToBitmap( @"C:\Users\Robert\source\repos\Gaussian_blur_Ams_and_Cpp\x64\Debug\krolWod.bmp");
-            Bitmap bitmapBig = ConvertImageToBitmap(    @"C:\Users\Robert\source\repos\Gaussian_blur_Ams_and_Cpp\x64\Debug\PXL_20240914_194829875.bmp");
+            const string imgPath = "..\\..\\..\\..\\..\\assets\\";
+            Bitmap bitmapSmall = ConvertImageToBitmap(  imgPath + "sum-ryba-900x450.bmp");
+            Bitmap bitmapMedium = ConvertImageToBitmap( imgPath + "krolWod.bmp");
+            Bitmap bitmapBig = ConvertImageToBitmap(    imgPath + "PXL_20240915_075912464.bmp");
 
             Stopwatch stopwatch = new Stopwatch();
             int counter = testIterations;
