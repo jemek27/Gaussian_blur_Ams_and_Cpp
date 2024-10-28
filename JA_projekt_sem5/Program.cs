@@ -10,7 +10,7 @@ namespace JA_projekt_sem5
         ///  The main entry point for the application.
         /// </summary>
 
-        [DllImport(@"C:\Users\Robert\source\repos\Gaussian_blur_Ams_and_Cpp\x64\Debug\JAAsm.dll")]
+        [DllImport(@"C:\Users\jemek\source\repos\Gaussian_blur_Ams_and_Cpp\x64\Debug\JAAsm.dll")]
         static extern int MyProc1(int a, int b);
         
         [STAThread]

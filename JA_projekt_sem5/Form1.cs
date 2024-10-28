@@ -5,11 +5,11 @@ using System.Security.Cryptography;
 using System.Threading.Tasks;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
-//TODO 
+//TODO push used registers in asm
 namespace JA_projekt_sem5 {
 
     public partial class Form1 : Form {
-        const string dllPath = "C:\\Users\\Robert\\source\\repos\\Gaussian_blur_Ams_and_Cpp\\x64\\Debug\\"; //Debug Release
+        const string dllPath = "..\\..\\..\\..\\..\\x64\\Debug\\"; //Debug Release
         [DllImport(dllPath + "C_functions.dll")]
         private static extern void ProcessBitmap(IntPtr bitmapData, int width, int height, int stride);
         [DllImport(dllPath + "C_functions.dll")]
@@ -31,11 +31,12 @@ namespace JA_projekt_sem5 {
         private Byte kernelSize = 11;
         private float sigma = 4;
 
-        private long totalTestTimeCpp = 0;
-        private long totalTestTimeAsm = 0;
-        private long tempTestTimeCpp = 0;
-        private long tempTestTimeAsm = 0;
-        private int testIterations = 1;
+        private long    totalTestTimeCpp = 0;
+        private long    totalTestTimeAsm = 0;
+        private long    tempTestTimeCpp = 0;
+        private long    tempTestTimeAsm = 0;
+        private int     testIterations = 1;
+        private Byte    numOfThreads = 1;
 
         public Form1() {
             InitializeComponent();
@@ -200,6 +201,7 @@ namespace JA_projekt_sem5 {
 
         private void runTestButton_Click(object sender, EventArgs e) {
             const string imgPath = "..\\..\\..\\..\\..\\assets\\";
+            const string csvPath = "..\\..\\..\\..\\..\\testCSV.csv";
             Bitmap bitmapSmall = ConvertImageToBitmap(  imgPath + "sum-ryba-900x450.bmp");
             Bitmap bitmapMedium = ConvertImageToBitmap( imgPath + "krolWod.bmp");
             Bitmap bitmapBig = ConvertImageToBitmap(    imgPath + "PXL_20240915_075912464.bmp");
@@ -226,6 +228,7 @@ namespace JA_projekt_sem5 {
                     tempTestTimeAsm += stopwatch.ElapsedMilliseconds;
                     stopwatch.Restart();
                 }
+                SaveToCsv(csvPath, tempTestTimeCpp, tempTestTimeAsm);
                 totalTestTimeCpp += tempTestTimeCpp;
                 totalTestTimeAsm += tempTestTimeAsm;
                 tempTestTimeCpp = 0;
@@ -251,6 +254,7 @@ namespace JA_projekt_sem5 {
                     tempTestTimeAsm += stopwatch.ElapsedMilliseconds;
                     stopwatch.Restart();
                 }
+                SaveToCsv(csvPath, tempTestTimeCpp, tempTestTimeAsm);
                 totalTestTimeCpp += tempTestTimeCpp;
                 totalTestTimeAsm += tempTestTimeAsm;
                 tempTestTimeCpp = 0;
@@ -276,6 +280,7 @@ namespace JA_projekt_sem5 {
                     tempTestTimeAsm += stopwatch.ElapsedMilliseconds;
                     stopwatch.Restart();
                 }
+                SaveToCsv(csvPath, tempTestTimeCpp, tempTestTimeAsm);
                 totalTestTimeCpp += tempTestTimeCpp;
                 totalTestTimeAsm += tempTestTimeAsm;
                 tempTestTimeCpp = 0;
@@ -340,7 +345,8 @@ namespace JA_projekt_sem5 {
         }
 
         private void trackBar1_Scroll(object sender, EventArgs e) {
-            labelAsmTestResult.Text = "Threads: " + trackBar1.Value.ToString();
+            numOfThreads = ((byte)trackBar1.Value);
+            labelAsmTestResult.Text = "Threads: " + numOfThreads;
         }
 
         private void iterationsTextBox_TextChanged(object sender, EventArgs e) {
@@ -357,10 +363,11 @@ namespace JA_projekt_sem5 {
 
             using (StreamWriter writer = new StreamWriter(filePath, append: true)) {
                 if (!fileExists) {
-                    writer.WriteLine("Time-cpp-ms,Time-asm-ms");
+                    writer.WriteLine("Time-cpp-ms,Time-asm-ms,Threads,Number-of-iterations");
                 }
 
-                writer.WriteLine($"{cppTime},{asmTime}");
+                writer.WriteLine($"{cppTime},{asmTime},{numOfThreads},{testIterations}");
+                labelAsmTestResult.Text = "saved to csv";
             }
         }
     }
