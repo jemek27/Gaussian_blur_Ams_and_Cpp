@@ -10,18 +10,20 @@ namespace JA_projekt_sem5 {
 
     public partial class Form1 : Form {
         const string dllPath = "..\\..\\..\\..\\..\\x64\\Debug\\"; //Debug Release
+
         [DllImport(dllPath + "C_functions.dll")]
-        private static extern void ProcessBitmap(IntPtr bitmapData, int width, int height, int stride);
+        private static extern void gaussBlur(   IntPtr bitmapData, byte[] tempBitmapData, double[] kernel, 
+                                                int width, int height, int stride, int kernelSize,
+                                                int startHeight, int endHeight);
         [DllImport(dllPath + "C_functions.dll")]
-        private static extern void gaussBlur(IntPtr bitmapData, int width, int height, int stride, int kernelSize, float sigma);
+        private static extern void createGaussianKernel(Byte kernelSize, float sigma, double[] kernel);
+
 
         [DllImport(dllPath + "JAAsm.dll")]
-        private static extern float createGaussianKernel(Byte kernelSize, float sigma, float[] kernel);
+        private static extern float createGaussianKernelAsm(Byte kernelSize, float sigma, float[] kernel);
         [DllImport(dllPath + "JAAsm.dll")]
-        private static extern int gaussBlurAsm(IntPtr bitmapData, int[] packedArguments, IntPtr tempBitmapData, float[] kernel); //TODO into void
-                                                                                                         //        private static extern long gaussBlurAsm(IntPtr bitmapData, int width, int height, int stride, int kernelSize, float sigma);
-        [DllImport(dllPath + "JAAsm.dll")]
-        private static extern long ProcessBitmapAsm(IntPtr bitmapData, int width, int height, int stride);
+        private static extern int gaussBlurAsm(IntPtr bitmapData, int[] packedArguments, byte[] tempBitmapData, float[] kernel); //TODO into void
+
 
         private Bitmap bitmap;
         private Bitmap bitmapOutput;
@@ -36,7 +38,7 @@ namespace JA_projekt_sem5 {
         private long    tempTestTimeCpp = 0;
         private long    tempTestTimeAsm = 0;
         private int     testIterations = 1;
-        private Byte    numOfThreads = 1;
+        private Byte    numOfThreads = 2;
 
         public Form1() {
             InitializeComponent();
@@ -83,7 +85,7 @@ namespace JA_projekt_sem5 {
             }
         }
 
-        private void processPictureButton_Click(object sender, EventArgs e) {
+        private async void processPictureButton_Click(object sender, EventArgs e) {
             if (bitmap != null) {
                 bitmapOutput = new Bitmap(bitmap);
                 Bitmap copyBitmap = new Bitmap(bitmap);
@@ -94,7 +96,14 @@ namespace JA_projekt_sem5 {
                     ImageLockMode.ReadWrite,
                     PixelFormat.Format24bppRgb);
 
-                if(radioButtonAsm.Checked) {
+                // 1st stage saves output here and 2nd stage uses it as input
+                byte[] tempCanvas = new byte[bitmapOutput.Width * bitmapOutput.Height * 3];
+
+
+
+                int segmentHight = bitmapOutput.Height / numOfThreads;
+
+                if (radioButtonAsm.Checked) {
                     float[] kernel = new float[kernelSize];
 
                     int[] gaussBlurAsmArguments = new int[4];
@@ -103,29 +112,39 @@ namespace JA_projekt_sem5 {
                     gaussBlurAsmArguments[2] = bmpData.Stride;
                     gaussBlurAsmArguments[3] = kernelSize;
 
-                    
-
-                    BitmapData copyBmpData = copyBitmap.LockBits(
-                        new Rectangle(0, 0, copyBitmap.Width, copyBitmap.Height),
-                        ImageLockMode.ReadWrite,
-                        PixelFormat.Format24bppRgb);
-
-                    float a = createGaussianKernel(kernelSize, sigma, kernel);
+                    float a = createGaussianKernelAsm(kernelSize, sigma, kernel);
                     labelAsmTestResult.Text = $"retVal = \n {kernel}";
-                    int testRet = gaussBlurAsm(bmpData.Scan0, gaussBlurAsmArguments, copyBmpData.Scan0, kernel);
+                    int testRet = gaussBlurAsm(bmpData.Scan0, gaussBlurAsmArguments, tempCanvas, kernel);
                     labelAsmTestResult.Text = $"retVal = {testRet} | {kernelSize} | {sigma}  \n {string.Join(", ", kernel)}";
 
-                    copyBitmap.UnlockBits(copyBmpData);
                 }
 
                 if (radioButtonCpp.Checked) {
-                    gaussBlur(bmpData.Scan0, bitmapOutput.Width, bitmapOutput.Height, bmpData.Stride, kernelSize, sigma);
-                    //ProcessBitmap(bmpData.Scan0, bitmap.Width, bitmap.Height, bmpData.Stride);
+                    double[] kernel = new double[kernelSize];
+                    createGaussianKernel(kernelSize, sigma, kernel);
+
+                    Task[] tasks = new Task[numOfThreads];
+
+                    for (int i = 0; i < numOfThreads; ++i) {
+                        int startHeight = i * segmentHight;
+                        int endHeight = (i + 1) * segmentHight;
+
+                        if (i == numOfThreads - 1) { endHeight = bitmapOutput.Height; }
+                        //TODO enable 2nd stage after neighbour are ready 
+                        tasks[i] = Task.Run(() =>
+                        {
+                            gaussBlur(bmpData.Scan0, tempCanvas, kernel, bitmapOutput.Width, bitmapOutput.Height,
+                                      bmpData.Stride, kernelSize, startHeight, endHeight);
+                        });
+
+                        
+                    }
+
+                    await Task.WhenAll(tasks);
                 }
 
 
                 bitmapOutput.UnlockBits(bmpData);
-                //DisplayImage(copyBitmap, processedPicture);
                 DisplayImage(bitmapOutput, processedPicture);
             }
         }
@@ -165,7 +184,7 @@ namespace JA_projekt_sem5 {
             }
 
             float[] tabK = new float[kernelSize];
-            float a = createGaussianKernel(kernelSize, sigma, tabK);
+            float a = createGaussianKernelAsm(kernelSize, sigma, tabK);
 
             //Display the result
             //labelAsmTestResult.Text = $"Sum of tabX[i] / tabN[i] = {sum}  | constrol sum = {controlSum}";
@@ -301,7 +320,35 @@ namespace JA_projekt_sem5 {
                     ImageLockMode.ReadWrite,
                     PixelFormat.Format24bppRgb);
 
-            gaussBlur(bmpData.Scan0, bmp.Width, bmp.Height, bmpData.Stride, kernelSize, sigma);
+            Bitmap copyBitmap = new Bitmap(bmp);
+
+            //TODO mar normal byte tab
+            BitmapData copyBmpData = copyBitmap.LockBits(
+                new Rectangle(0, 0, copyBitmap.Width, copyBitmap.Height),
+                ImageLockMode.ReadWrite,
+                PixelFormat.Format24bppRgb);
+
+            int endIndex = bmpData.Stride * bitmapOutput.Height * 3;
+            int segmentuSize = endIndex / numOfThreads;
+
+            double[] kernel = new double[kernelSize];
+            createGaussianKernel(kernelSize, sigma, kernel);
+            for (int i = 0; i < numOfThreads; ++i) {
+                int startID = i * segmentuSize;
+                int endID = (i + 1) * segmentuSize;
+
+                if (i == numOfThreads - 1) { endID = endIndex; }
+                //preparing data for this format 
+                //int pixelIndex = y * stride + x * 3; // BMP uses 3 bytes per pixel (BGR format)
+                //int startHeight = startID / bmpData.Stride;
+                //int startWidth = (startID % bmpData.Stride) / 3;
+                //int workingHeight = endID / bmpData.Stride;
+                //int workingWidth = (endID % bmpData.Stride) / 3;
+
+
+                //gaussBlur(bmpData.Scan0, copyBmpData.Scan0, kernel, bitmapOutput.Width, bitmapOutput.Height,
+                //            bmpData.Stride, kernelSize, workingWidth, workingHeight, startWidth, startHeight);
+            }
 
             bmp.UnlockBits(bmpData);
         }
@@ -327,8 +374,8 @@ namespace JA_projekt_sem5 {
                 ImageLockMode.ReadWrite,
                 PixelFormat.Format24bppRgb);
 
-            float a = createGaussianKernel(kernelSize, sigma, kernel);
-            int testRet = gaussBlurAsm(bmpData.Scan0, gaussBlurAsmArguments, copyBmpData.Scan0, kernel);
+            float a = createGaussianKernelAsm(kernelSize, sigma, kernel);
+            //int testRet = gaussBlurAsm(bmpData.Scan0, gaussBlurAsmArguments, copyBmpData.Scan0, kernel);
 
             copyBitmap.UnlockBits(copyBmpData);
             bmp.UnlockBits(bmpData);

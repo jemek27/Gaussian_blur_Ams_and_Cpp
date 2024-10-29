@@ -104,11 +104,11 @@ add RCX, RDX
 mov RAX, RCX
 ret
 MyProc1 endp
-; createGaussianKernel does not save the states of the registers. Possible overwriting
+; createGaussianKernelAsm does not save the states of the registers. Possible overwriting
 ; xmm1 - sigma (flaot)
 ; R8 - pointer to tabK (float array)
 ; CL - kernelSize (Byte)
-createGaussianKernel proc
+createGaussianKernelAsm proc
 
 
     lea rdi, [r8]           ; Load the kernel array pointer into the rdi register 
@@ -183,7 +183,7 @@ normalize_kernel_loop:
     jl normalize_kernel_loop
 
     ret
-createGaussianKernel endp
+createGaussianKernelAsm endp
 ;//////////////////////////////////
 
 ;//////////////////////////////////
@@ -235,7 +235,7 @@ gaussBlurAsm proc
     ; xmm1 - sigma (flaot)
     ; R8 - pointer to tabK (float array)
     ; CL - kernelSize (Byte)
-    ; call createGaussianKernel 
+    ; call createGaussianKernelAsm 
     ; ret
     mov  rdx, r14               ; restoring parameter  
     mov  rsi, r15               ; rsi = *bitmapData
