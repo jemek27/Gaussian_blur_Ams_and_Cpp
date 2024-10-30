@@ -52,6 +52,7 @@
             trackBar1 = new TrackBar();
             labelXTimes = new Label();
             iterationsTextBox = new TextBox();
+            SaveButton = new Button();
             ((System.ComponentModel.ISupportInitialize)inputPicture).BeginInit();
             ((System.ComponentModel.ISupportInitialize)processedPicture).BeginInit();
             ((System.ComponentModel.ISupportInitialize)trackBar1).BeginInit();
@@ -352,11 +353,24 @@
             iterationsTextBox.TabIndex = 35;
             iterationsTextBox.TextChanged += iterationsTextBox_TextChanged;
             // 
+            // SaveButton
+            // 
+            SaveButton.Font = new Font("Segoe UI", 11F);
+            SaveButton.Location = new Point(603, 58);
+            SaveButton.Margin = new Padding(3, 2, 3, 2);
+            SaveButton.Name = "SaveButton";
+            SaveButton.Size = new Size(120, 30);
+            SaveButton.TabIndex = 37;
+            SaveButton.Text = "Save Picture";
+            SaveButton.UseVisualStyleBackColor = true;
+            SaveButton.Click += SaveButton_Click;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1584, 761);
+            Controls.Add(SaveButton);
             Controls.Add(labelXTimes);
             Controls.Add(iterationsTextBox);
             Controls.Add(trackBar1);
@@ -426,5 +440,6 @@
         private TrackBar trackBar1;
         private Label labelXTimes;
         private TextBox iterationsTextBox;
+        private Button SaveButton;
     }
 }
