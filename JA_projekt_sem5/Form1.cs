@@ -2,12 +2,15 @@ using System.Diagnostics;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
-using System.Threading.Tasks;
+using System.Threading;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 //TODO push used registers in asm
 //TODO auto kernel = 6*sigma + 1 albo jakiœ switch od rozmiaru
-//TODO asm wêtki 
+//TODO cleaning
+//TODO python script for data visualization
+//TODO check release
+//TODO path to dll
 namespace JA_projekt_sem5 {
 
     public partial class Form1 : Form {
