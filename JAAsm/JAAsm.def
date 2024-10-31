@@ -3,3 +3,5 @@ EXPORTS MyProc1
 		expAsm
 		createGaussianKernelAsm
 		gaussBlurAsm
+		gaussBlurStage1Asm
+		gaussBlurStage2Asm

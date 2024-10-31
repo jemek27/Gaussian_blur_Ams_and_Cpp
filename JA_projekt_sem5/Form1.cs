@@ -34,6 +34,10 @@ namespace JA_projekt_sem5 {
         private static extern float createGaussianKernelAsm(Byte kernelSize, float sigma, float[] kernel);
         [DllImport(dllPath + "JAAsm.dll")]
         private static extern int gaussBlurAsm(byte[] bitmapData, int[] packedArguments, byte[] tempBitmapData, float[] kernel); //TODO into void
+        [DllImport(dllPath + "JAAsm.dll")]
+        private static extern int gaussBlurStage1Asm(byte[] bitmapData, int[] packedArguments, byte[] tempBitmapData, float[] kernel); //TODO into void
+        [DllImport(dllPath + "JAAsm.dll")]
+        private static extern int gaussBlurStage2Asm(byte[] bitmapData, int[] packedArguments, byte[] tempBitmapData, float[] kernel); //TODO into void
 
 
         private Bitmap bitmap;
@@ -49,7 +53,7 @@ namespace JA_projekt_sem5 {
         private long tempTestTimeCpp = 0;
         private long tempTestTimeAsm = 0;
         private int testIterations = 1;
-        private Byte numOfThreads = 3;
+        private int numOfThreads = 1;
 
         public Form1() {
             InitializeComponent();
@@ -211,7 +215,7 @@ namespace JA_projekt_sem5 {
                     tempTestTimeAsm += stopwatch.ElapsedMilliseconds;
                     stopwatch.Restart();
                 }
-                SaveToCsv(csvPath, tempTestTimeCpp, tempTestTimeAsm);
+                SaveToCsv(csvPath, tempTestTimeCpp, tempTestTimeAsm, "small");
                 totalTestTimeCpp += tempTestTimeCpp;
                 totalTestTimeAsm += tempTestTimeAsm;
                 tempTestTimeCpp = 0;
@@ -237,7 +241,7 @@ namespace JA_projekt_sem5 {
                     tempTestTimeAsm += stopwatch.ElapsedMilliseconds;
                     stopwatch.Restart();
                 }
-                SaveToCsv(csvPath, tempTestTimeCpp, tempTestTimeAsm);
+                SaveToCsv(csvPath, tempTestTimeCpp, tempTestTimeAsm, "medium");
                 totalTestTimeCpp += tempTestTimeCpp;
                 totalTestTimeAsm += tempTestTimeAsm;
                 tempTestTimeCpp = 0;
@@ -263,7 +267,7 @@ namespace JA_projekt_sem5 {
                     tempTestTimeAsm += stopwatch.ElapsedMilliseconds;
                     stopwatch.Restart();
                 }
-                SaveToCsv(csvPath, tempTestTimeCpp, tempTestTimeAsm);
+                SaveToCsv(csvPath, tempTestTimeCpp, tempTestTimeAsm, "big");
                 totalTestTimeCpp += tempTestTimeCpp;
                 totalTestTimeAsm += tempTestTimeAsm;
                 tempTestTimeCpp = 0;
@@ -271,7 +275,7 @@ namespace JA_projekt_sem5 {
                 counter = testIterations;
             }
 
-
+            SaveToCsv(csvPath, totalTestTimeCpp, totalTestTimeAsm, "all");
             timeCppLabel.Text = ConvertMillisecondsToTimeFormat(totalTestTimeCpp);
             timeAsmLabel.Text = ConvertMillisecondsToTimeFormat(totalTestTimeAsm);
             totalTestTimeCpp = 0;
@@ -383,29 +387,73 @@ namespace JA_projekt_sem5 {
 
                 int segmentHeight = bitmapBlurred.Height / numOfThreads;
 
-                if (radioButtonAsm.Checked) {
-                    float[] kernel = new float[kernelSize];
+                float[] kernel = new float[kernelSize];
+                float a = createGaussianKernelAsm(kernelSize, sigma, kernel);
+                ///////////
 
-                    int[] gaussBlurAsmArguments = new int[4];
+                // Assign starting and ending values for each segment
+                Thread[] threads = new Thread[numOfThreads];
+                int[] startHeights = new int[numOfThreads];
+                int[] endHeights = new int[numOfThreads];
+
+                // Segment the image
+                for (int i = 0; i < numOfThreads; ++i) {
+                    startHeights[i] = i * segmentHeight;
+                    endHeights[i] = (i + 1) * segmentHeight;
+
+                    if (i == numOfThreads - 1) { endHeights[i] = bitmapBlurred.Height; }
+                }
+
+                // Vertical blur
+                for (int i = 0; i < numOfThreads; ++i) {
+                    int start = startHeights[i];
+                    int end = endHeights[i];
+
+                    int[] gaussBlurAsmArguments = new int[5];
+                    gaussBlurAsmArguments[0] = bitmapBlurred.Width;
+                    gaussBlurAsmArguments[1] = end;
+                    gaussBlurAsmArguments[2] = bmpData.Stride;
+                    gaussBlurAsmArguments[3] = kernelSize;
+                    gaussBlurAsmArguments[4] = start;
+
+                    threads[i] = new Thread(() => {
+                        gaussBlurStage1Asm(bmpDataBuffer, gaussBlurAsmArguments, tempCanvas, kernel);
+                    });
+                    threads[i].Start();
+                }
+
+                // Wait for all vertical blur threads to finish
+                foreach (var thread in threads) {
+                    thread.Join();
+                }
+
+                // Horizontal blur
+                for (int i = 0; i < numOfThreads; ++i) {
+                    int start = startHeights[i];
+                    int end = endHeights[i];
+
+                    int[] gaussBlurAsmArguments = new int[6];
                     gaussBlurAsmArguments[0] = bitmapBlurred.Width;
                     gaussBlurAsmArguments[1] = bitmapBlurred.Height;
                     gaussBlurAsmArguments[2] = bmpData.Stride;
                     gaussBlurAsmArguments[3] = kernelSize;
+                    gaussBlurAsmArguments[4] = start;
+                    gaussBlurAsmArguments[5] = end;
 
-                    float a = createGaussianKernelAsm(kernelSize, sigma, kernel);
-
-                    double controlSum = 0;
-                    for (int i = 0; i < kernelSize; ++i) {
-                        controlSum += kernel[i];
-                    }
-
-                    int testRet = gaussBlurAsm(bmpDataBuffer, gaussBlurAsmArguments, tempCanvas, kernel);
-                    labelAsmTestResult.Text = $"retVal = {controlSum} | {kernelSize} | {sigma}  \n {string.Join(", ", kernel)}";
-
-                    // Copy processed data back to the bitmap
-                    Marshal.Copy(bmpDataBuffer, 0, bmpData.Scan0, bmpDataBuffer.Length);
-
+                    threads[i] = new Thread(() => {
+                        gaussBlurStage2Asm(bmpDataBuffer, gaussBlurAsmArguments, tempCanvas, kernel);
+                    });
+                    threads[i].Start();
                 }
+
+                // Wait for all horizontal blur threads to finish
+                foreach (var thread in threads) {
+                    thread.Join();
+                }
+
+
+                // Copy processed data back to the bitmap
+                Marshal.Copy(bmpDataBuffer, 0, bmpData.Scan0, bmpDataBuffer.Length);
 
                 bitmapBlurred.UnlockBits(bmpData);
                 return bitmapBlurred;
@@ -426,7 +474,7 @@ namespace JA_projekt_sem5 {
 
         private void trackBar1_Scroll(object sender, EventArgs e) {
             numOfThreads = ((byte)trackBar1.Value);
-            labelAsmTestResult.Text = "Threads: " + numOfThreads;
+            threadsLabel.Text = "Number of threads: " + numOfThreads.ToString();
         }
 
         private void iterationsTextBox_TextChanged(object sender, EventArgs e) {
@@ -438,15 +486,15 @@ namespace JA_projekt_sem5 {
             }
         }
 
-        private void SaveToCsv(string filePath, long cppTime, long asmTime) {
+        private void SaveToCsv(string filePath, long cppTime, long asmTime, String sizeName) {
             bool fileExists = File.Exists(filePath);
 
             using (StreamWriter writer = new StreamWriter(filePath, append: true)) {
                 if (!fileExists) {
-                    writer.WriteLine("Time-cpp-ms,Time-asm-ms,Threads,Number-of-iterations");
+                    writer.WriteLine("Time-cpp-ms,Time-asm-ms,sizeName,Threads,Number-of-iterations");
                 }
 
-                writer.WriteLine($"{cppTime},{asmTime},{numOfThreads},{testIterations}");
+                writer.WriteLine($"{cppTime},{asmTime},{sizeName},{numOfThreads},{testIterations}");
                 labelAsmTestResult.Text = "saved to csv";
             }
         }
@@ -458,6 +506,12 @@ namespace JA_projekt_sem5 {
             } catch (Exception ex) {
                 labelAsmTestResult.Text = $"B³¹d przy zapisywaniu obrazu: {ex.Message}";
             }
+        }
+
+        private void button2_Click(object sender, EventArgs e) {
+            numOfThreads = Environment.ProcessorCount;
+            trackBar1.Value = numOfThreads;
+            threadsLabel.Text = "Number of threads: " + numOfThreads.ToString();
         }
     }
 }

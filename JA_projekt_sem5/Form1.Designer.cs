@@ -53,6 +53,8 @@
             labelXTimes = new Label();
             iterationsTextBox = new TextBox();
             SaveButton = new Button();
+            threadsLabel = new Label();
+            button2 = new Button();
             ((System.ComponentModel.ISupportInitialize)inputPicture).BeginInit();
             ((System.ComponentModel.ISupportInitialize)processedPicture).BeginInit();
             ((System.ComponentModel.ISupportInitialize)trackBar1).BeginInit();
@@ -60,17 +62,19 @@
             // 
             // inputPicture
             // 
-            inputPicture.Location = new Point(30, 182);
+            inputPicture.BackColor = SystemColors.ButtonShadow;
+            inputPicture.BorderStyle = BorderStyle.FixedSingle;
+            inputPicture.Location = new Point(269, 44);
             inputPicture.Margin = new Padding(3, 2, 3, 2);
             inputPicture.Name = "inputPicture";
-            inputPicture.Size = new Size(750, 500);
+            inputPicture.Size = new Size(300, 200);
             inputPicture.TabIndex = 5;
             inputPicture.TabStop = false;
             // 
             // loadPictureButton
             // 
             loadPictureButton.Font = new Font("Segoe UI", 11F);
-            loadPictureButton.Location = new Point(376, 56);
+            loadPictureButton.Location = new Point(31, 44);
             loadPictureButton.Margin = new Padding(3, 2, 3, 2);
             loadPictureButton.Name = "loadPictureButton";
             loadPictureButton.Size = new Size(120, 30);
@@ -85,17 +89,19 @@
             // 
             // processedPicture
             // 
-            processedPicture.Location = new Point(805, 182);
+            processedPicture.BackColor = SystemColors.ButtonShadow;
+            processedPicture.BorderStyle = BorderStyle.FixedSingle;
+            processedPicture.Location = new Point(606, 44);
             processedPicture.Margin = new Padding(3, 2, 3, 2);
             processedPicture.Name = "processedPicture";
-            processedPicture.Size = new Size(750, 500);
+            processedPicture.Size = new Size(1050, 700);
             processedPicture.TabIndex = 7;
             processedPicture.TabStop = false;
             // 
             // processPictureButton
             // 
             processPictureButton.Font = new Font("Segoe UI", 11F);
-            processPictureButton.Location = new Point(376, 90);
+            processPictureButton.Location = new Point(31, 78);
             processPictureButton.Margin = new Padding(3, 2, 3, 2);
             processPictureButton.Name = "processPictureButton";
             processPictureButton.Size = new Size(120, 30);
@@ -106,7 +112,7 @@
             // 
             // kernelSizeTextBox
             // 
-            kernelSizeTextBox.Location = new Point(30, 58);
+            kernelSizeTextBox.Location = new Point(37, 325);
             kernelSizeTextBox.Margin = new Padding(3, 2, 3, 2);
             kernelSizeTextBox.Name = "kernelSizeTextBox";
             kernelSizeTextBox.Size = new Size(140, 23);
@@ -114,7 +120,7 @@
             // 
             // sigmaTextBox
             // 
-            sigmaTextBox.Location = new Point(187, 58);
+            sigmaTextBox.Location = new Point(205, 325);
             sigmaTextBox.Margin = new Padding(3, 2, 3, 2);
             sigmaTextBox.Name = "sigmaTextBox";
             sigmaTextBox.Size = new Size(140, 23);
@@ -123,7 +129,7 @@
             // blureConfigButton
             // 
             blureConfigButton.Font = new Font("Segoe UI", 11F);
-            blureConfigButton.Location = new Point(31, 95);
+            blureConfigButton.Location = new Point(37, 352);
             blureConfigButton.Margin = new Padding(3, 2, 3, 2);
             blureConfigButton.Name = "blureConfigButton";
             blureConfigButton.Size = new Size(100, 30);
@@ -136,7 +142,7 @@
             // 
             labelKernelSize.AutoSize = true;
             labelKernelSize.Font = new Font("Segoe UI", 13F);
-            labelKernelSize.Location = new Point(30, 27);
+            labelKernelSize.Location = new Point(37, 294);
             labelKernelSize.Name = "labelKernelSize";
             labelKernelSize.Size = new Size(128, 25);
             labelKernelSize.TabIndex = 16;
@@ -146,7 +152,7 @@
             // 
             labelSigmaSize.AutoSize = true;
             labelSigmaSize.Font = new Font("Segoe UI", 13F);
-            labelSigmaSize.Location = new Point(187, 27);
+            labelSigmaSize.Location = new Point(205, 294);
             labelSigmaSize.Name = "labelSigmaSize";
             labelSigmaSize.Size = new Size(136, 25);
             labelSigmaSize.TabIndex = 13;
@@ -154,7 +160,7 @@
             // 
             // button1
             // 
-            button1.Location = new Point(31, 686);
+            button1.Location = new Point(37, 685);
             button1.Margin = new Padding(3, 2, 3, 2);
             button1.Name = "button1";
             button1.Size = new Size(82, 22);
@@ -166,7 +172,7 @@
             // labelAsmTestResult
             // 
             labelAsmTestResult.AutoSize = true;
-            labelAsmTestResult.Location = new Point(131, 690);
+            labelAsmTestResult.Location = new Point(137, 689);
             labelAsmTestResult.Name = "labelAsmTestResult";
             labelAsmTestResult.Size = new Size(0, 15);
             labelAsmTestResult.TabIndex = 15;
@@ -176,7 +182,7 @@
             radioButtonAsm.AutoSize = true;
             radioButtonAsm.Checked = true;
             radioButtonAsm.Font = new Font("Segoe UI", 11F);
-            radioButtonAsm.Location = new Point(515, 58);
+            radioButtonAsm.Location = new Point(170, 46);
             radioButtonAsm.Name = "radioButtonAsm";
             radioButtonAsm.Size = new Size(56, 24);
             radioButtonAsm.TabIndex = 16;
@@ -189,7 +195,7 @@
             // 
             radioButtonCpp.AutoSize = true;
             radioButtonCpp.Font = new Font("Segoe UI", 11F);
-            radioButtonCpp.Location = new Point(515, 84);
+            radioButtonCpp.Location = new Point(170, 72);
             radioButtonCpp.Name = "radioButtonCpp";
             radioButtonCpp.Size = new Size(56, 24);
             radioButtonCpp.TabIndex = 17;
@@ -201,7 +207,7 @@
             // 
             label1.AutoSize = true;
             label1.Font = new Font("Segoe UI", 13F);
-            label1.Location = new Point(805, 27);
+            label1.Location = new Point(37, 404);
             label1.Name = "label1";
             label1.Size = new Size(96, 25);
             label1.TabIndex = 18;
@@ -211,7 +217,7 @@
             // 
             label2.AutoSize = true;
             label2.Font = new Font("Segoe UI", 11F);
-            label2.Location = new Point(805, 52);
+            label2.Location = new Point(37, 429);
             label2.Name = "label2";
             label2.Size = new Size(352, 20);
             label2.TabIndex = 19;
@@ -221,7 +227,7 @@
             // 
             label3.AutoSize = true;
             label3.Font = new Font("Segoe UI", 13F);
-            label3.Location = new Point(805, 95);
+            label3.Location = new Point(37, 472);
             label3.Name = "label3";
             label3.Size = new Size(210, 25);
             label3.TabIndex = 24;
@@ -230,7 +236,7 @@
             // runTestButton
             // 
             runTestButton.Font = new Font("Segoe UI", 11F);
-            runTestButton.Location = new Point(1326, 42);
+            runTestButton.Location = new Point(43, 548);
             runTestButton.Margin = new Padding(3, 2, 3, 2);
             runTestButton.Name = "runTestButton";
             runTestButton.Size = new Size(120, 30);
@@ -243,7 +249,7 @@
             // 
             timeAsmLabel.AutoSize = true;
             timeAsmLabel.Font = new Font("Segoe UI", 16F);
-            timeAsmLabel.Location = new Point(1408, 78);
+            timeAsmLabel.Location = new Point(125, 584);
             timeAsmLabel.Name = "timeAsmLabel";
             timeAsmLabel.Size = new Size(107, 30);
             timeAsmLabel.TabIndex = 26;
@@ -253,7 +259,7 @@
             // 
             timeCppLabel.AutoSize = true;
             timeCppLabel.Font = new Font("Segoe UI", 16F);
-            timeCppLabel.Location = new Point(1408, 118);
+            timeCppLabel.Location = new Point(125, 624);
             timeCppLabel.Name = "timeCppLabel";
             timeCppLabel.Size = new Size(107, 30);
             timeCppLabel.TabIndex = 27;
@@ -263,7 +269,7 @@
             // 
             label6.AutoSize = true;
             label6.Font = new Font("Segoe UI", 16F);
-            label6.Location = new Point(1326, 78);
+            label6.Location = new Point(43, 584);
             label6.Name = "label6";
             label6.Size = new Size(55, 30);
             label6.TabIndex = 28;
@@ -273,7 +279,7 @@
             // 
             label7.AutoSize = true;
             label7.Font = new Font("Segoe UI", 16F);
-            label7.Location = new Point(1326, 118);
+            label7.Location = new Point(43, 624);
             label7.Name = "label7";
             label7.Size = new Size(57, 30);
             label7.TabIndex = 29;
@@ -283,7 +289,7 @@
             // 
             checkBoxAll.AutoSize = true;
             checkBoxAll.Font = new Font("Segoe UI", 11F);
-            checkBoxAll.Location = new Point(810, 125);
+            checkBoxAll.Location = new Point(42, 502);
             checkBoxAll.Name = "checkBoxAll";
             checkBoxAll.Size = new Size(46, 24);
             checkBoxAll.TabIndex = 30;
@@ -295,7 +301,7 @@
             // 
             checkBoxSmall.AutoSize = true;
             checkBoxSmall.Font = new Font("Segoe UI", 11F);
-            checkBoxSmall.Location = new Point(861, 125);
+            checkBoxSmall.Location = new Point(93, 502);
             checkBoxSmall.Name = "checkBoxSmall";
             checkBoxSmall.Size = new Size(65, 24);
             checkBoxSmall.TabIndex = 31;
@@ -306,7 +312,7 @@
             // 
             checkBoxMedium.AutoSize = true;
             checkBoxMedium.Font = new Font("Segoe UI", 11F);
-            checkBoxMedium.Location = new Point(932, 125);
+            checkBoxMedium.Location = new Point(164, 502);
             checkBoxMedium.Name = "checkBoxMedium";
             checkBoxMedium.Size = new Size(83, 24);
             checkBoxMedium.TabIndex = 32;
@@ -317,7 +323,7 @@
             // 
             checkBoxBig.AutoSize = true;
             checkBoxBig.Font = new Font("Segoe UI", 11F);
-            checkBoxBig.Location = new Point(1019, 125);
+            checkBoxBig.Location = new Point(251, 502);
             checkBoxBig.Name = "checkBoxBig";
             checkBoxBig.Size = new Size(50, 24);
             checkBoxBig.TabIndex = 33;
@@ -326,19 +332,22 @@
             // 
             // trackBar1
             // 
+            trackBar1.BackColor = SystemColors.Control;
             trackBar1.LargeChange = 8;
-            trackBar1.Location = new Point(376, 125);
-            trackBar1.Maximum = 128;
+            trackBar1.Location = new Point(31, 202);
+            trackBar1.Maximum = 64;
+            trackBar1.Minimum = 1;
             trackBar1.Name = "trackBar1";
             trackBar1.Size = new Size(195, 45);
             trackBar1.TabIndex = 34;
+            trackBar1.Value = 1;
             trackBar1.Scroll += trackBar1_Scroll;
             // 
             // labelXTimes
             // 
             labelXTimes.AutoSize = true;
             labelXTimes.Font = new Font("Segoe UI", 13F);
-            labelXTimes.Location = new Point(1075, 95);
+            labelXTimes.Location = new Point(307, 472);
             labelXTimes.Name = "labelXTimes";
             labelXTimes.Size = new Size(127, 25);
             labelXTimes.TabIndex = 36;
@@ -346,7 +355,7 @@
             // 
             // iterationsTextBox
             // 
-            iterationsTextBox.Location = new Point(1075, 127);
+            iterationsTextBox.Location = new Point(307, 504);
             iterationsTextBox.Margin = new Padding(3, 2, 3, 2);
             iterationsTextBox.Name = "iterationsTextBox";
             iterationsTextBox.Size = new Size(140, 23);
@@ -356,7 +365,7 @@
             // SaveButton
             // 
             SaveButton.Font = new Font("Segoe UI", 11F);
-            SaveButton.Location = new Point(603, 58);
+            SaveButton.Location = new Point(31, 119);
             SaveButton.Margin = new Padding(3, 2, 3, 2);
             SaveButton.Name = "SaveButton";
             SaveButton.Size = new Size(120, 30);
@@ -365,11 +374,35 @@
             SaveButton.UseVisualStyleBackColor = true;
             SaveButton.Click += SaveButton_Click;
             // 
+            // threadsLabel
+            // 
+            threadsLabel.AutoSize = true;
+            threadsLabel.Font = new Font("Segoe UI", 13F);
+            threadsLabel.Location = new Point(31, 174);
+            threadsLabel.Name = "threadsLabel";
+            threadsLabel.Size = new Size(182, 25);
+            threadsLabel.TabIndex = 38;
+            threadsLabel.Text = "Number of threads: 1";
+            // 
+            // button2
+            // 
+            button2.Font = new Font("Segoe UI", 11F);
+            button2.Location = new Point(37, 241);
+            button2.Margin = new Padding(3, 2, 3, 2);
+            button2.Name = "button2";
+            button2.Size = new Size(179, 30);
+            button2.TabIndex = 39;
+            button2.Text = "Set to number of cores";
+            button2.UseVisualStyleBackColor = true;
+            button2.Click += button2_Click;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1584, 761);
+            ClientSize = new Size(1680, 781);
+            Controls.Add(button2);
+            Controls.Add(threadsLabel);
             Controls.Add(SaveButton);
             Controls.Add(labelXTimes);
             Controls.Add(iterationsTextBox);
@@ -441,5 +474,7 @@
         private Label labelXTimes;
         private TextBox iterationsTextBox;
         private Button SaveButton;
+        private Label threadsLabel;
+        private Button button2;
     }
 }

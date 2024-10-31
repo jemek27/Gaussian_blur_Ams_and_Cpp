@@ -11,9 +11,14 @@
     one         dd 1.0 
     neg_one     dd -1.0 
 .code
-; xmm0 - x (float)
-; RDX - pointer to tabX (double array)
-; R8  - pointer to tabN (int array)
+
+;//////////////////////////////////
+; Description:
+    ; calculates exp(x)
+; Input: 
+    ; xmm0 - x (float)
+    ; RDX - pointer to tabX (double array)
+    ; R8  - pointer to tabN (int array)
 expAsm proc
 ; Save the state of general purpose registers
     push rbx
@@ -21,12 +26,10 @@ expAsm proc
     push rdi
     push rsi
 
-
 ; Save floating point registers (XMM0 - XMM2)
     sub rsp, 32                  ; Reserve space for 2 128-bit registers
     movdqu [rsp], xmm1           ; Save xmm0
     movdqu [rsp+16], xmm2        ; Save xmm1
-
 
 ; TabX operations - Calculating powers of x (e^x)
     lea rdi, [testTabX]         ; Load the pointer to tabX into the RDI register
@@ -42,6 +45,7 @@ x_powers:
     je enf_of_x_powers                      ; If so, end the loop
     inc rbx                                 ; Increment the index
     mulsd xmm0, xmm1                        ; Multiply xmm0 by x (x = RCX)
+
 ; Insert the value into tabX
     movsd qword ptr [rdi + rbx * 8], xmm0   ; Write the result to tabX[rbx]
     jmp x_powers                            ; loop back
@@ -83,7 +87,7 @@ end_sum:
     movsd xmm0, xmm2             ; Move sum to xmm0
     cvtsd2ss xmm0, xmm0          ; convert double back to float
 
-    ; Restore registers
+; Restore registers
     movdqu xmm1, [rsp]           ; Restore xmm0
     movdqu xmm2, [rsp+16]        ; Restore xmm1
     add rsp, 32                  ; Free stack space
@@ -99,15 +103,22 @@ expAsm endp
 ;//////////////////////////////////
 
 ;//////////////////////////////////
+; proc for testing if asm works
 MyProc1 proc
 add RCX, RDX
 mov RAX, RCX
 ret
 MyProc1 endp
-; createGaussianKernelAsm does not save the states of the registers. Possible overwriting
-; xmm1 - sigma (flaot)
-; R8 - pointer to tabK (float array)
-; CL - kernelSize (Byte)
+;//////////////////////////////////
+;//////////////////////////////////
+; Description:
+    ; Generates a Gauss blur kernel of a specified size. 
+    ; Given a kernel size and sigma value, the function calculates weights 
+    ; that decrease with distance from the center, simulating the Gaussian function.
+; Input: 
+    ; xmm1 - sigma (flaot)
+    ; R8 - pointer to tabK (float array)
+    ; CL - kernelSize (Byte)
 createGaussianKernelAsm proc
 
 
@@ -139,24 +150,24 @@ fill_kernel_loop:
     movss xmm5, xmm4
     mulss xmm5, xmm5           ; xmm5 = x^2
 
-    ; -x^2 / (2 * sigma^2)
+; -x^2 / (2 * sigma^2)
     divss xmm5, xmm6           ; xmm5 = x^2 / (2 * sigma^2)
 
     movss xmm0, [neg_one]
     mulss xmm5, xmm0           ; xmm5 = -x^2 / (2 * sigma^2)
  
-    ; exp(-x^2 / (2 * sigma^2))
+; exp(-x^2 / (2 * sigma^2))
     movss xmm0, xmm5
 
 
     call expAsm                   ; call exp function, result in xmm0
 
-    ; sqrt(2 * M_PI * sigma^2)
+; sqrt(2 * M_PI * sigma^2)
     movss xmm8, dword ptr [pi]  ; Load M_PI value
     mulss xmm8, xmm6            ; xmm8 = M_PI * (2 * sigma^2) 
     sqrtss xmm8, xmm8           ; xmm8 = sqrt(2 * sigma^2 * M_PI)
 
-    ; G(x) = exp(-x^2 / (2 * sigma^2)) / sqrt(2 * M_PI * sigma^2)
+; G(x) = exp(-x^2 / (2 * sigma^2)) / sqrt(2 * M_PI * sigma^2)
     divss xmm0, xmm8           ; xmm0 = G(x)
 
 ; Insert the result into the kernel[i] array 
@@ -169,9 +180,7 @@ fill_kernel_loop:
     cmp rbx, rcx
     jl fill_kernel_loop        ; If i < kernelSize, loop back
 
-
     xor rbx, rbx                ; Set index as 0
-
 normalize_kernel_loop:
 ; Normalize kernel
     movss xmm0, dword ptr [rdi + rbx * 4]
@@ -187,17 +196,21 @@ createGaussianKernelAsm endp
 ;//////////////////////////////////
 
 ;//////////////////////////////////
-    ; Wejście: 
-    ;   - rcx: bitmapData (wskazanie na dane bitmapy)
-    ;   - rdx: array args [width, height, stride, kernelSize]
-    ;   - r8: *tempData
-    ;   - r9; *kernel
- ;///////////////  
-    ; Uzywane rejestry:
+; Description:
+    ; A Gaussian blur procedure using separable convolutions applies the blur
+    ; in two stages first horizontally across the image, then vertically.
+    ; Convolving each row of pixels with the given kernel horizontally
+    ; and each column of the intermediate result vertically.
+; Input: 
+    ; rcx: bitmapData (pointing to bitmap data)
+    ; rdx: array args [width, height, stride, kernelSize]
+    ; r8: *tempData
+    ; r9; *kernel
+;Registers used:
     ; rax   tempVal, selectedIndex
     ; rbx   tempVal, pixelIndex 
-    ; rcx   x
-    ; rdx   y
+    ; rcx   y 
+    ; rdx   x 
     ; r8    width   
     ; r9    height
     ; r10   stride
@@ -209,56 +222,31 @@ createGaussianKernelAsm endp
     ; rsi   *bitmapData
     ; rdi   *kernel
     ;
-    ; 
-    ;
     ; xmm0 = xxxx rBlr gBlr bBlr  
     ; xmm1 = xxxx rImg gImg bImg 
     ; xmm3 = kerI kerI kerI kerI 
 gaussBlurAsm proc
-; call createGaussianKernel does not modify r11-15
-    xor  r11, r11
-    mov  r15, rcx                       ; rcx needed for func call
-    mov  r14, rdx                       ; rdx needed for func call
-    mov  r11d, dword ptr [rdx + 12]     ; r11 = kernelSize
+; Save callee-saved registers to stack
+    push rbx
+    push r12
+    push r13
+    push r14
+    push r15
+ 
+; Prepare parameters  
+    mov  rsi, rcx                       ; rsi = *bitmapData
     mov  rdi, r9                        ; rdi = *kernel
-
-                
-
-    ; imul  rax, r11, 4            ; rax = kernelSize * 4 (flaot = 4 bytes)
-    ;     ret
-    ; sub   rsp, rax               ; allock array of size kernelSize on stack
-
-    ; mov     r8, r9
-    ; mov     rcx, r11            ; cl = kernelSize
-    ; movss   xmm1, xmm2          ; xmm1 = sigma
-    
-    ; xmm1 - sigma (flaot)
-    ; R8 - pointer to tabK (float array)
-    ; CL - kernelSize (Byte)
-    ; call createGaussianKernelAsm 
-    ; ret
-    mov  rdx, r14               ; restoring parameter  
-    mov  rsi, r15               ; rsi = *bitmapData
     mov  r15, r8                        ; r15 = *tempData
 
-    ; lea rsp, [r8]               ; rsp has 
-
-    ; imul  rax, r11, 4        
-    ; add   rsp, rax  
-    ; lea rsp, [r8]             
-    ; ret
-
-    ; Prepare parameters
     xor  r8, r8   
     xor  r9, r9 
     xor  r10, r10 
-
+    xor  r11, r11
 
     mov  r8d, dword ptr [rdx]            ; r8  = width   
     mov  r9d, dword ptr [rdx + 4]        ; r9  = height
     mov  r10d, dword ptr [rdx + 8]       ; r10 = stride
-    ; mov  r11d, dword ptr [rdx + 12]      ; r11 = kernelSize
-
+    mov  r11d, dword ptr [rdx + 12]      ; r11 = kernelSize
 
     mov  r14, r11                        ; kernelSize -> r14
     shr  r14, 1                          ; r14 = offset = kernelSize / 2 
@@ -350,9 +338,6 @@ continue:
     inc r13                        ; i++
     jmp i_loop                     ; back to I loop
 
-
-    
-
 end_i_loop:
     ; save blured pixel in temp
     ; 1. Extract 1st value from xmm0
@@ -402,7 +387,7 @@ x_loop_2nd:
     ; xmm0 = xxxx rBlr gBlr bBlr  
     xorps xmm0, xmm0    ; blurredPixels (only 3 so 1 will be ignorred)
     xor   r13, r13      ; i
-i_loop_2nd: ;TODO x y swap
+i_loop_2nd: 
     cmp  r13, r11                ; if (i >= kernelSize), end I loop ->  (i < kernelSize)
     jge  end_i_loop_2nd
     mov  rbx, r13                ; rbx = i;
@@ -421,7 +406,6 @@ i_loop_2nd: ;TODO x y swap
     add  rax, rbx               ; rbx = selectedIndex = pixelIndex + ((i - offset) * stride)
 
     jmp continue_2nd               ; skip next code fragment (represents other case)
-;TODO tu tyż przerobić
 less_than_zero_2nd:
     add  rbx, 1                 ; 1 + selectedY
     imul rbx, r10               ; (1 + selectedY) * stride
@@ -464,9 +448,6 @@ i_skip_2nd:
     inc r13                        ; i++
     jmp i_loop_2nd                 ; back to I loop
 
-
-    
-
 end_i_loop_2nd:
     ; save blured pixel in Img
     ; 1. Extract 1st value from xmm0
@@ -491,13 +472,392 @@ end_x_loop_2nd:
     jmp y_loop_2nd                 ; back to Y loop
 
 end_y_loop_2nd:
-    ; free memeory 
-    ; imul  rax, r11, 4        
-    ; add  rsp, rax               
-    ; ret
+; Get saved registers from stack
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+
     ret
 gaussBlurAsm endp
 ;//////////////////////////////////
+
+;//////////////////////////////////
+; Description:
+    ; Separate procedure performing only the 1st stage (horizontall) of the Gaussian blur. 
+    ; Used in multithreading.
+; Input: 
+    ; rcx: bitmapData (pointing to bitmap data)
+    ; rdx: array args [width, endHeight, stride, kernelSize, startHeight]
+    ; r8: *tempData
+    ; r9; *kernel
+;///////////////  
+;Registers used:
+    ; rax   tempVal, selectedIndex
+    ; rbx   tempVal, pixelIndex 
+    ; rcx   y = startHeight
+    ; rdx   x 
+    ; r8    width   
+    ; r9    height = endHeight
+    ; r10   stride
+    ; r11   kernelSize
+    ; r12   pixelIndex
+    ; r13   i (kernel index)
+    ; r14   offset = kernelSize / 2; // we consider the middle index as 0 e.g. [-2, -1, 0, 1, 2]
+    ; r15   *tempData
+    ; rsi   *bitmapData
+    ; rdi   *kernel
+    ;
+    ; xmm0 = xxxx rBlr gBlr bBlr  
+    ; xmm1 = xxxx rImg gImg bImg 
+    ; xmm3 = kerI kerI kerI kerI 
+gaussBlurStage1Asm proc
+; Save callee-saved registers to stack
+    push rbx
+    push r12
+    push r13
+    push r14
+    push r15
+ 
+; Prepare parameters  
+    mov  rsi, rcx                       ; rsi = *bitmapData
+    mov  rdi, r9                        ; rdi = *kernel
+    mov  r15, r8                        ; r15 = *tempData
+
+    xor  r8, r8   
+    xor  r9, r9 
+    xor  r10, r10 
+    xor  r11, r11
+
+    mov  r8d, dword ptr [rdx]            ; r8  = width   
+    mov  r9d, dword ptr [rdx + 4]        ; r9  = height = endHeight
+    mov  r10d, dword ptr [rdx + 8]       ; r10 = stride
+    mov  r11d, dword ptr [rdx + 12]      ; r11 = kernelSize
+
+    mov  r14, r11                        ; kernelSize -> r14
+    shr  r14, 1                          ; r14 = offset = kernelSize / 2 
+
+; Y-loop: Goes through half the height
+    xor  rcx, rcx                       ; rcx -> y = 0
+    mov  ecx, dword ptr [rdx + 16]      ; rcx = startHeight
+y_loop_Stage1:
+    cmp  rcx, r9                 ; if (y >= height), end loop
+    jge  end_y_loop_Stage1
+
+; X-loop: Goes through half the width
+    xor  rdx, rdx                ; rdx -> x = 0
+x_loop_Stage1:
+    cmp  rdx, r8                 ; if (x >= width), end loop
+    jge  end_x_loop_Stage1
+    ; TODO may be mul instead of imul?
+    ; Calculate pixel index (pixelIndex = y * stride + x * 3)
+    mov   r12, rcx               ; r12 = y
+    imul  r12, r10               ; r12 = y * stride
+    imul  rbx, rdx, 3            ; rbx = x * 3
+    add   r12, rbx               ; r12 = pixelIndex = y * stride + x * 3    
+
+    ; I-loop: goes through kernel
+    ; xmm0 = xxxx rBlr gBlr bBlr  
+    xorps xmm0, xmm0    ; blurredPixels (only 3 so 1 will be ignorred)
+    xor   r13, r13      ; i
+i_loop_Stage1:
+    cmp  r13, r11                ; if (i >= kernelSize), end I loop ->  (i < kernelSize)
+    jge  end_i_loop_Stage1
+    mov  rbx, r13                ; rbx = i;
+    sub  rbx, r14                ; rbx = i - offset
+    mov  rax, rbx                ; (i - offset) will reuse in a moment line 303
+    add  rbx, rdx                ; rbx = selectedX = (i - offset) + x
+    
+
+    cmp  rbx, 0                  ; if (selectedX < 0) end -> (selectedX >= 0)
+    jl   less_than_zero_Stage1         ; &&
+    cmp  rbx, r8                 ; if (selectedX >= width) end -> (selectedX < width)
+    jge  more_than_width_Stage1
+    
+    imul rax, 3                 ;((i - offset) * 3)
+    mov  rbx, r12               ; rbx = pixelIndex
+    add  rax, rbx               ; rax = selectedIndex = pixelIndex + ((i - offset) * 3)
+
+    jmp continue_Stage1         ; skip next code fragment (represents other case)
+
+;if out of border we want to mirror the edge 
+;-2 -1 [ 0 1 ... n-1 n ] n+1 n+2     
+; 1  0 [ 0 1 ... n-1 n ] n   n-1    
+
+less_than_zero_Stage1:
+    add  rbx, 1                 ; 1 + selectedX
+    imul rbx, 3                 ; (1 + selectedX) * 3
+    neg  rbx                    ; (1 + selectedX) * -3
+    mov  rax, r12               ; rax = pixelIndex
+    add  rax, rbx               ; selectedIndex += (1 + selectedX) * -3;
+
+    jmp continue_Stage1         ; skip next code fragment (represents other case)
+
+more_than_width_Stage1:
+    add  rbx, 1                 ; 1 + selectedX
+    mov  rax, r8                ; rax = width
+    sub  rax, rbx               ; rax = width - 1 - selectedX = width - (1 + selectedX)
+    imul rax, 3                 ; rax = (width - 1 - selectedX) * 3
+    add  rax, r12               ; rax = selectedIndex += (width - 1 - selectedX) * 3;
+
+continue_Stage1: 
+    ; get bytes
+    ; xmm3 = kerI kerI kerI kerI 
+    vbroadcastss xmm3, dword ptr [rdi + r13 * 4]      ; Load one float value (kernel[i]) and put it in all 4 xmm0 slots
+    
+    ; xmm1 = xxxx rImg gImg bImg 
+    movzx ebx, byte ptr [rsi + rax]     ; Load and expand byte1 into the 32-bit eax register
+    cvtsi2ss xmm1, ebx                  ; Convert eax (32bit int) to float and put it in xmm1
+
+    movzx ebx, byte ptr [rsi + rax + 1]     
+    cvtsi2ss xmm2, ebx 
+    insertps xmm1, xmm2, 16             ; Insert float from xmm2 into xmm1 in second slot (offset 0x10)
+
+    
+    movzx ebx, byte ptr [rsi + rax + 2]     
+    cvtsi2ss xmm2, ebx  
+    insertps xmm1, xmm2, 32 
+
+    mulps xmm1, xmm3                    ; xmm1 = xmm1 * xmm3 (multiplies all elements in the packets)
+    addps xmm0, xmm1                    ; xmm0 = xmm0 + xmm1 
+
+
+    inc r13                        ; i++
+    jmp i_loop_Stage1              ; back to I loop
+
+end_i_loop_Stage1:
+    ; save blured pixel in temp
+    ; 1. Extract 1st value from xmm0
+    cvttss2si eax, xmm0                 ; Conversion float -> int
+    mov byte ptr [r15 + r12], al        ; Save the result as a byte
+
+    ; 2. Extract 2nd value from xmm0
+    psrldq xmm0, 4                      ; byte shift [3,2,1,0] --> [X,3,2,1]
+    cvttss2si eax, xmm0     
+    mov byte ptr [r15 + r12 + 1], al 
+
+    ; 3. Extract 3rd value from xmm0
+    psrldq xmm0, 4                      ; byte shift [X,3,2,1] --> [X,X,3,2]
+    cvttss2si eax, xmm0     
+    mov byte ptr [r15 + r12 + 2], al 
+
+    inc rdx                        ; x++
+    jmp x_loop_Stage1              ; back to X loop
+
+end_x_loop_Stage1:
+    inc rcx                         ; y++
+    jmp y_loop_Stage1               ; back to Y loop
+
+end_y_loop_Stage1:
+; Get saved registers from stack
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+
+    ret
+gaussBlurStage1Asm endp
+;//////////////////////////////////
+
+;//////////////////////////////////
+; Description:
+    ; Separate procedure performing only the 2nd stage (verticall) of the Gaussian blur. 
+    ; Used in multithreading.
+; Input: 
+    ; rcx: bitmapData (pointing to bitmap data)
+    ; rdx: array args [width, height, stride, kernelSize, startHeight, endHeight]
+    ; r8: *tempData
+    ; r9; *kernel
+;///////////////  
+;Registers used:
+    ; rax   tempVal, selectedIndex
+    ; rbx   tempVal, pixelIndex 
+    ; rcx   y = startHeight
+    ; rdx   x 
+    ; r8    width   
+    ; r9    height 
+    ; r10   stride
+    ; r11   kernelSize
+    ; r12   pixelIndex
+    ; r13   i (kernel index)
+    ; r14   offset = kernelSize / 2; // we consider the middle index as 0 e.g. [-2, -1, 0, 1, 2]
+    ; r15   *tempData
+    ; rsi   *bitmapData
+    ; rdi   *kernel
+    ;  
+    ; xmm0 = xxxx rBlr gBlr bBlr  
+    ; xmm1 = xxxx rImg gImg bImg 
+    ; xmm3 = kerI kerI kerI kerI 
+    ;
+    ; [rsp]  endHeight
+gaussBlurStage2Asm proc
+; Save callee-saved registers to stack
+    push rbx
+    push r12
+    push r13
+    push r14
+    push r15
+
+; Init const on stack
+    sub rsp, 4                                  ; Decrease the stack pointer by 4 bytes to allocate space for an int
+
+; Assign the value endHeight to the variable on the stack
+    xor rax, rax
+    mov eax, dword ptr[rdx + 20]  
+    mov dword ptr [rsp], eax    
+
+; Prepare parameters  
+    mov  rsi, rcx                       ; rsi = *bitmapData
+    mov  rdi, r9                        ; rdi = *kernel
+    mov  r15, r8                        ; r15 = *tempData
+
+    xor  r8, r8   
+    xor  r9, r9 
+    xor  r10, r10 
+    xor  r11, r11
+
+    mov  r8d, dword ptr [rdx]            ; r8  = width   
+    mov  r9d, dword ptr [rdx + 4]        ; r9  = height 
+    mov  r10d, dword ptr [rdx + 8]       ; r10 = stride
+    mov  r11d, dword ptr [rdx + 12]      ; r11 = kernelSize
+
+    mov  r14, r11                        ; kernelSize -> r14
+    shr  r14, 1                          ; r14 = offset = kernelSize / 2 
+
+; Y-loop: Goes through half the height
+    xor  rcx, rcx                       ; rcx -> y = 0
+    mov  ecx, dword ptr [rdx + 16]      ; rcx = startHeight
+y_loop_Stage2:
+    mov eax, dword ptr [rsp]        ; eax = endHeight
+
+    cmp  ecx, eax                   ; if (y >= endHeight), end loop
+    jge  end_y_loop_Stage2
+
+; X-loop: Goes through half the width
+    xor  rdx, rdx               ; rdx -> x = 0
+x_loop_Stage2:
+    cmp  rdx, r8                ; if (x >= width), end loop
+    jge  end_x_loop_Stage2
+    ; TODO may be mul instead of imul?
+    ; Calculate pixel index (pixelIndex = y * stride + x * 3)
+    mov   r12, rcx              ; r12 = y
+    imul  r12, r10              ; r12 = y * stride
+    imul  rbx, rdx, 3           ; rbx = x * 3
+    add   r12, rbx              ; r12 = pixelIndex = y * stride + x * 3    
+
+    ; I-loop: goes through kernel
+    ; xmm0 = xxxx rBlr gBlr bBlr  
+    xorps xmm0, xmm0            ; blurredPixels (only 3 so 1 will be ignorred)
+    xor   r13, r13              ; i
+
+i_loop_Stage2:
+    cmp  r13, r11                ; if (i >= kernelSize), end I loop ->  (i < kernelSize)
+    jge  end_i_loop_Stage2
+    mov  rbx, r13                ; rbx = i;
+    sub  rbx, r14                ; rbx = i - offset
+    mov  rax, rbx                ; (i - offset) will reuse in a moment
+    add  rbx, rcx                ; rbx = (i - offset) + y
+    
+
+    cmp  rbx, 0                  ; if (selectedY < 0) end -> (selectedY >= 0)
+    jl   less_than_zero_Stage2      ; &&
+    cmp  rbx, r9                 ; if (selectedY >= height) end -> (selectedY < height)
+    jge  more_than_height_Stage2
+    
+    imul rax, r10               ; ((i - offset) * stride)
+    mov  rbx, r12               ; rbx = pixelIndex
+    add  rax, rbx               ; rbx = selectedIndex = pixelIndex + ((i - offset) * stride)
+
+    jmp continue_Stage2         ; skip next code fragment (represents other case)
+less_than_zero_Stage2:
+    add  rbx, 1                 ; 1 + selectedY
+    imul rbx, r10               ; (1 + selectedY) * stride
+    neg  rbx                    ; (1 + selectedY) * -stride
+    mov  rax, r12               ; rax = pixelIndex
+    add  rax, rbx               ; selectedIndex += (1 + selectedX) * -stride;
+
+    jmp continue_Stage2         ; skip next code fragment (represents other case)
+
+more_than_height_Stage2:
+
+    add  rbx, 1                 ; 1 + selectedY
+    mov  rax, r9                ; rax = height
+    sub  rax, rbx               ; rax = height - 1 - selectedY = height - (1 + selectedy)
+    imul rax, r10               ; rax = (height - 1 - selectedY) * stride
+    add  rax, r12               ; rax = selectedIndex += (width - 1 - selectedY) * stride;
+
+continue_Stage2:  
+    ; get bytes
+    ; xmm3 = kerI kerI kerI kerI 
+    vbroadcastss xmm3, dword ptr [rdi + r13 * 4]      ; Load one float value (kernel[i]) and put it in all 4 xmm0 slots
+    
+    ; xmm1 = xxxx rTImg gTImg bTImg 
+    movzx ebx, byte ptr [r15 + rax]     ; Load and expand byte1 into the 32-bit eax register
+    cvtsi2ss xmm1, ebx                  ; Convert eax (32bit int) to float and put it in xmm1
+
+    movzx ebx, byte ptr [r15 + rax + 1]     
+    cvtsi2ss xmm2, ebx 
+    insertps xmm1, xmm2, 16             ; Insert float from xmm2 into xmm1 in second slot (offset 0x10)
+
+    
+    movzx ebx, byte ptr [r15 + rax + 2]     
+    cvtsi2ss xmm2, ebx  
+    insertps xmm1, xmm2, 32 
+
+    mulps xmm1, xmm3                    ; xmm1 = xmm1 * xmm3 (multiplies all elements in the packets)
+    addps xmm0, xmm1                    ; xmm0 = xmm0 + xmm1 
+
+i_skip_Stage2:
+    inc r13                        ; i++
+    jmp i_loop_Stage2              ; back to I loop
+
+
+    
+
+end_i_loop_Stage2:
+    ; save blured pixel in Img
+    ; 1. Extract 1st value from xmm0
+    cvttss2si eax, xmm0                 ; Conversion float -> int
+    mov byte ptr [rsi + r12], al        ; Save the result as a byte
+
+    ; 2. Extract 2nd value from xmm0
+    psrldq xmm0, 4                      ; byte shift [3,2,1,0] --> [X,3,2,1]
+    cvttss2si eax, xmm0     
+    mov byte ptr [rsi + r12 + 1], al 
+
+    ; 3. Extract 3rd value from xmm0
+    psrldq xmm0, 4                      ; byte shift [X,3,2,1] --> [X,X,3,2]
+    cvttss2si eax, xmm0     
+    mov byte ptr [rsi + r12 + 2], al 
+
+    inc rdx                        ; x++
+    jmp x_loop_Stage2              ; back to X loop
+
+end_x_loop_Stage2:
+    inc rcx                         ; y++
+    jmp y_loop_Stage2               ; back to Y loop
+
+end_y_loop_Stage2:
+
+    add rsp, 4               ; Free up the space on the stack by restoring rsp
+
+; Get saved registers from stack
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+
+    ret
+gaussBlurStage2Asm endp
+;//////////////////////////////////
+
+
+
+
+
 
 ;//////////////////////////////////
 ProcessBitmapAsm proc
@@ -569,3 +929,4 @@ end_y_loop:
 ProcessBitmapAsm endp
 ;//////////////////////////////////
 end
+
