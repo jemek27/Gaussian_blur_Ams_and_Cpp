@@ -51,12 +51,15 @@ namespace JA_projekt_sem5 {
         private Byte kernelSize = 11;
         private float sigma = 4;
 
+        private int numOfThreads = 1;
+
         private long totalTestTimeCpp = 0;
         private long totalTestTimeAsm = 0;
         private long tempTestTimeCpp = 0;
         private long tempTestTimeAsm = 0;
         private int testIterations = 1;
-        private int numOfThreads = 1;
+        private int testStartThreadsNum = 1;
+        private int testEndThreadsNum = 64;
 
         public Form1() {
             InitializeComponent();
@@ -191,98 +194,130 @@ namespace JA_projekt_sem5 {
 
         private void runTestButton_Click(object sender, EventArgs e) {
             const string imgPath = "..\\..\\..\\..\\..\\assets\\";
-            const string csvPath = "..\\..\\..\\..\\..\\testCSV.csv";
+            const string csvHistoryPath = "..\\..\\..\\..\\..\\testTimeHistory.csv";
+            const string csvTestTimePath = "..\\..\\..\\..\\..\\testTime.csv";
             Bitmap bitmapSmall = ConvertImageToBitmap(imgPath + "sum-ryba-900x450.bmp");
             Bitmap bitmapMedium = ConvertImageToBitmap(imgPath + "krolWod.bmp");
             Bitmap bitmapBig = ConvertImageToBitmap(imgPath + "PXL_20240915_075912464.bmp");
 
+
             Stopwatch stopwatch = new Stopwatch();
-            int counter = testIterations;
+            String csvDataBuffer = "";
+            int tempNumOfThreads = numOfThreads; // needs to be saved to restore later (will be used for test)
+            int testNumOfThreads = testStartThreadsNum;
 
-            if (checkBoxSmall.Checked) {
-                while (counter > 0) {
-                    --counter;
-                    stopwatch.Start();
-                    applyGaussianBlurCpp(bitmapSmall);
-                    stopwatch.Stop();
+            // Select the appropriate lambda based on the checkbox state
+            Action incrementAction = checkBoxDoublingEachIter.Checked
+                ? () => testNumOfThreads *= 2
+                : () => ++testNumOfThreads;
+            //TODO add avg time cpp and asm
+            bool testRunning = true;
+            for (; testRunning; incrementAction()) {
 
-                    tempTestTimeCpp += stopwatch.ElapsedMilliseconds;
-                    stopwatch.Restart();
-
-                    //////////////////////
-
-                    stopwatch.Start();
-                    applyGaussianBlurAsm(bitmapSmall);
-                    stopwatch.Stop();
-
-                    tempTestTimeAsm += stopwatch.ElapsedMilliseconds;
-                    stopwatch.Restart();
+                //last iteration
+                if (testNumOfThreads >= testEndThreadsNum) {
+                    testNumOfThreads = testEndThreadsNum;
+                    testRunning = false;
                 }
-                SaveToCsv(csvPath, tempTestTimeCpp, tempTestTimeAsm, "small");
-                totalTestTimeCpp += tempTestTimeCpp;
-                totalTestTimeAsm += tempTestTimeAsm;
-                tempTestTimeCpp = 0;
-                tempTestTimeAsm = 0;
-                counter = testIterations;
-            }
-            if (checkBoxMedium.Checked) {
-                while (counter > 0) {
-                    --counter;
-                    stopwatch.Start();
-                    applyGaussianBlurCpp(bitmapMedium);
-                    stopwatch.Stop();
 
-                    tempTestTimeCpp += stopwatch.ElapsedMilliseconds;
-                    stopwatch.Restart();
+                
+                int counter = testIterations;
+                numOfThreads = testNumOfThreads;
 
-                    //////////////////////
+                if (checkBoxSmall.Checked) {
+                    while (counter > 0) {
+                        --counter;
+                        stopwatch.Start();
+                        applyGaussianBlurCpp(bitmapSmall);
+                        stopwatch.Stop();
 
-                    stopwatch.Start();
-                    applyGaussianBlurAsm(bitmapMedium);
-                    stopwatch.Stop();
+                        tempTestTimeCpp += stopwatch.ElapsedMilliseconds;
+                        stopwatch.Restart();
 
-                    tempTestTimeAsm += stopwatch.ElapsedMilliseconds;
-                    stopwatch.Restart();
+                        //////////////////////
+
+                        stopwatch.Start();
+                        applyGaussianBlurAsm(bitmapSmall);
+                        stopwatch.Stop();
+
+                        tempTestTimeAsm += stopwatch.ElapsedMilliseconds;
+                        stopwatch.Restart();
+                    }
+                    csvDataBuffer += $"{tempTestTimeCpp},{tempTestTimeAsm},small,{numOfThreads},{testIterations} \n";
+                    totalTestTimeCpp += tempTestTimeCpp;
+                    totalTestTimeAsm += tempTestTimeAsm;
+                    tempTestTimeCpp = 0;
+                    tempTestTimeAsm = 0;
+                    counter = testIterations;
                 }
-                SaveToCsv(csvPath, tempTestTimeCpp, tempTestTimeAsm, "medium");
-                totalTestTimeCpp += tempTestTimeCpp;
-                totalTestTimeAsm += tempTestTimeAsm;
-                tempTestTimeCpp = 0;
-                tempTestTimeAsm = 0;
-                counter = testIterations;
-            }
-            if (checkBoxBig.Checked) {
-                while (counter > 0) {
-                    --counter;
-                    stopwatch.Start();
-                    applyGaussianBlurCpp(bitmapBig);
-                    stopwatch.Stop();
+                if (checkBoxMedium.Checked) {
+                    while (counter > 0) {
+                        --counter;
+                        stopwatch.Start();
+                        applyGaussianBlurCpp(bitmapMedium);
+                        stopwatch.Stop();
 
-                    tempTestTimeCpp += stopwatch.ElapsedMilliseconds;
-                    stopwatch.Restart();
+                        tempTestTimeCpp += stopwatch.ElapsedMilliseconds;
+                        stopwatch.Restart();
 
-                    //////////////////////
+                        //////////////////////
 
-                    stopwatch.Start();
-                    applyGaussianBlurAsm(bitmapBig);
-                    stopwatch.Stop();
+                        stopwatch.Start();
+                        applyGaussianBlurAsm(bitmapMedium);
+                        stopwatch.Stop();
 
-                    tempTestTimeAsm += stopwatch.ElapsedMilliseconds;
-                    stopwatch.Restart();
+                        tempTestTimeAsm += stopwatch.ElapsedMilliseconds;
+                        stopwatch.Restart();
+                    }
+                    csvDataBuffer += $"{tempTestTimeCpp},{tempTestTimeAsm},medium,{numOfThreads},{testIterations} \n";
+                    totalTestTimeCpp += tempTestTimeCpp;
+                    totalTestTimeAsm += tempTestTimeAsm;
+                    tempTestTimeCpp = 0;
+                    tempTestTimeAsm = 0;
+                    counter = testIterations;
                 }
-                SaveToCsv(csvPath, tempTestTimeCpp, tempTestTimeAsm, "big");
-                totalTestTimeCpp += tempTestTimeCpp;
-                totalTestTimeAsm += tempTestTimeAsm;
-                tempTestTimeCpp = 0;
-                tempTestTimeAsm = 0;
-                counter = testIterations;
+                if (checkBoxBig.Checked) {
+                    while (counter > 0) {
+                        --counter;
+                        stopwatch.Start();
+                        applyGaussianBlurCpp(bitmapBig);
+                        stopwatch.Stop();
+
+                        tempTestTimeCpp += stopwatch.ElapsedMilliseconds;
+                        stopwatch.Restart();
+
+                        //////////////////////
+
+                        stopwatch.Start();
+                        applyGaussianBlurAsm(bitmapBig);
+                        stopwatch.Stop();
+
+                        tempTestTimeAsm += stopwatch.ElapsedMilliseconds;
+                        stopwatch.Restart();
+                    }
+                    csvDataBuffer += $"{tempTestTimeCpp},{tempTestTimeAsm},big,{numOfThreads},{testIterations} \n";
+                    totalTestTimeCpp += tempTestTimeCpp;
+                    totalTestTimeAsm += tempTestTimeAsm;
+                    tempTestTimeCpp = 0;
+                    tempTestTimeAsm = 0;
+                    counter = testIterations;
+                }
+                csvDataBuffer += $"{totalTestTimeCpp},{totalTestTimeAsm},all,{numOfThreads},{testIterations} \n";
+
+
+                timeCppLabel.Text = ConvertMillisecondsToTimeFormat(totalTestTimeCpp);
+                timeAsmLabel.Text = ConvertMillisecondsToTimeFormat(totalTestTimeAsm);
+                timeCppLabel.Refresh();  // Force immediate label update
+                timeAsmLabel.Refresh();  
+                totalTestTimeCpp = 0;
+                totalTestTimeAsm = 0;
             }
 
-            SaveToCsv(csvPath, totalTestTimeCpp, totalTestTimeAsm, "all");
-            timeCppLabel.Text = ConvertMillisecondsToTimeFormat(totalTestTimeCpp);
-            timeAsmLabel.Text = ConvertMillisecondsToTimeFormat(totalTestTimeAsm);
-            totalTestTimeCpp = 0;
-            totalTestTimeAsm = 0;
+            csvDataBuffer = csvDataBuffer.Remove(csvDataBuffer.Length - 1); // last \n is not needed
+
+            SaveToCsv(csvTestTimePath, csvDataBuffer, false);
+            SaveToCsv(csvHistoryPath, csvDataBuffer);
+            numOfThreads = tempNumOfThreads; //restoring
         }
 
         private Bitmap applyGaussianBlurCpp(Bitmap bmpIn) {
@@ -481,23 +516,25 @@ namespace JA_projekt_sem5 {
         }
 
         private void iterationsTextBox_TextChanged(object sender, EventArgs e) {
-            try {
-                testIterations = Convert.ToInt32(iterationsTextBox.Text);
-                labelXTimes.Text = $"Repeat {testIterations} times";
-            } catch (FormatException ex) {
-                labelXTimes.Text = labelXTimes.Text + " Incorrect format!";
+            if (labelXTimes.Text.Length != 0) {
+                try {
+                    testIterations = Convert.ToInt32(iterationsTextBox.Text);
+                    labelXTimes.Text = $"Repeat {testIterations} times";
+                } catch (FormatException ex) {
+                    labelXTimes.Text = $"Repeat {testIterations} times    Incorrect format!";
+                }
             }
         }
 
-        private void SaveToCsv(string filePath, long cppTime, long asmTime, String sizeName) {
+        private void SaveToCsv(string filePath, string dataRows, bool append = true) {
             bool fileExists = File.Exists(filePath);
 
-            using (StreamWriter writer = new StreamWriter(filePath, append: true)) {
-                if (!fileExists) {
+            using (StreamWriter writer = new StreamWriter(filePath, append: append)) {
+                if (!fileExists || !append) { //if not exists or when overwriting
                     writer.WriteLine("Time-cpp-ms,Time-asm-ms,sizeName,Threads,Number-of-iterations");
                 }
 
-                writer.WriteLine($"{cppTime},{asmTime},{sizeName},{numOfThreads},{testIterations}");
+                writer.WriteLine(dataRows);
                 labelAsmTestResult.Text = "saved to csv";
             }
         }
@@ -515,6 +552,36 @@ namespace JA_projekt_sem5 {
             numOfThreads = Environment.ProcessorCount;
             trackBar1.Value = numOfThreads;
             threadsLabel.Text = "Number of threads: " + numOfThreads.ToString();
+        }
+
+        private void textBoxStartThreadsNum_TextChanged(object sender, EventArgs e) {
+            if (textBoxStartThreadsNum.Text.Length != 0) {
+                try {
+                    testStartThreadsNum = Convert.ToInt32(textBoxStartThreadsNum.Text);
+
+                    if (testStartThreadsNum == 0) {
+                        textBoxStartThreadsNum.Text = testStartThreadsNum.ToString();
+                        //Set cursor to end
+                        textBoxStartThreadsNum.SelectionStart = textBoxStartThreadsNum.Text.Length;
+                    }
+                } catch (FormatException ex) {
+                    textBoxStartThreadsNum.Text = testStartThreadsNum.ToString();
+                    //Set cursor to end
+                    textBoxStartThreadsNum.SelectionStart = textBoxStartThreadsNum.Text.Length;
+                }
+            }
+        }
+
+        private void textBoxEndThreadsNum_TextChanged(object sender, EventArgs e) {
+            if (textBoxEndThreadsNum.Text.Length != 0) {
+                try {
+                    testEndThreadsNum = Convert.ToInt32(textBoxEndThreadsNum.Text);
+                } catch (FormatException ex) {
+                    textBoxEndThreadsNum.Text = testEndThreadsNum.ToString();
+                    //Set cursor to end
+                    textBoxEndThreadsNum.SelectionStart = textBoxEndThreadsNum.Text.Length;
+                }
+            }
         }
     }
 }
