@@ -33,8 +33,7 @@
             blureConfigButton = new Button();
             labelKernelSize = new Label();
             labelSigmaSize = new Label();
-            button1 = new Button();
-            labelAsmTestResult = new Label();
+            labelStatus = new Label();
             radioButtonAsm = new RadioButton();
             radioButtonCpp = new RadioButton();
             label1 = new Label();
@@ -165,24 +164,14 @@
             labelSigmaSize.TabIndex = 13;
             labelSigmaSize.Text = "Set sigma value";
             // 
-            // button1
-            // 
-            button1.Location = new Point(37, 707);
-            button1.Margin = new Padding(3, 2, 3, 2);
-            button1.Name = "button1";
-            button1.Size = new Size(82, 22);
-            button1.TabIndex = 14;
-            button1.Text = "Test asm";
-            button1.UseVisualStyleBackColor = true;
-            button1.Click += buttonTestAsm_Click;
-            // 
             // labelAsmTestResult
             // 
-            labelAsmTestResult.AutoSize = true;
-            labelAsmTestResult.Location = new Point(137, 707);
-            labelAsmTestResult.Name = "labelAsmTestResult";
-            labelAsmTestResult.Size = new Size(0, 15);
-            labelAsmTestResult.TabIndex = 15;
+            labelStatus.AutoSize = true;
+            labelStatus.ForeColor = SystemColors.ControlDark;
+            labelStatus.Location = new Point(42, 757);
+            labelStatus.Name = "labelAsmTestResult";
+            labelStatus.Size = new Size(0, 15);
+            labelStatus.TabIndex = 15;
             // 
             // radioButtonAsm
             // 
@@ -508,8 +497,7 @@
             Controls.Add(label1);
             Controls.Add(radioButtonCpp);
             Controls.Add(radioButtonAsm);
-            Controls.Add(labelAsmTestResult);
-            Controls.Add(button1);
+            Controls.Add(labelStatus);
             Controls.Add(labelSigmaSize);
             Controls.Add(labelKernelSize);
             Controls.Add(blureConfigButton);
@@ -541,8 +529,7 @@
         private Button blureConfigButton;
         private Label labelKernelSize;
         private Label labelSigmaSize;
-        private Button button1;
-        private Label labelAsmTestResult;
+        private Label labelStatus;
         private RadioButton radioButtonAsm;
         private RadioButton radioButtonCpp;
         private Label label1;
