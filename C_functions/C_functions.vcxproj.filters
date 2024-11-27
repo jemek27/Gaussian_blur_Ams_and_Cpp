@@ -21,9 +21,6 @@
     <ClInclude Include="pch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="test_C.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="gauss_blur.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -33,9 +30,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="pch.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="test_C.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="gauss_blur.cpp">

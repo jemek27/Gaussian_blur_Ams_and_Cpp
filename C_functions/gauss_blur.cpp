@@ -5,13 +5,13 @@
 
 # define M_PI   3.14159265358979323846
 
-extern "C" __declspec(dllexport) void createGaussianKernel(unsigned __int8 kernelSize, float sigma, double* kernel) {
+extern "C" __declspec(dllexport) void createGaussianKernel(unsigned __int8 kernelSize, float sigma, float* kernel) {
 
     if (kernelSize & 0b00000001) { //is uneven
         int x = kernelSize / -2; // we consider the middle index as 0 e.g. [-2, -1, 0, 1, 2]
 
-        double s = 2 * sigma * sigma;
-        double sum = 0; //for subsequent normalisation
+        float s = 2 * sigma * sigma;
+        float sum = 0; //for subsequent normalisation
 
         for (int i = 0; i < kernelSize; ++i) {
             // Gauss 1D G(x)
@@ -25,31 +25,6 @@ extern "C" __declspec(dllexport) void createGaussianKernel(unsigned __int8 kerne
         }
     }
 }
-
-//double* createGaussianKernel(unsigned __int8 kernelSize, float sigma) {
-//
-//    if (kernelSize & 0b00000001) { //is uneven
-//        double* kernel = new double[kernelSize];
-//        int x = kernelSize / -2; // we consider the middle index as 0 e.g. [-2, -1, 0, 1, 2]
-//        
-//        double sigmaPower2 = pow(sigma, 2);
-//        double sum = 0; //for subsequent normalisation
-//
-//        for (int i = 0; i < kernelSize; ++i) {
-//            // Gauss 1D G(x)
-//            kernel[i] = exp(pow(x++, 2) / (-2 * sigmaPower2)) / (sqrt(2 * M_PI * sigmaPower2));
-//            sum += kernel[i];
-//        }
-//
-//        for (int i = 0; i < kernelSize; ++i) {
-//            kernel[i] /= sum;
-//        }
-//
-//        return kernel;
-//    } else {
-//        return nullptr;
-//    }
-//}
 
 extern "C" __declspec(dllexport) void gaussBlur(unsigned char* bitmapData, unsigned char* tempData, double* kernel, 
                                                 int width, int height, int stride, int kernelSize, 
@@ -130,7 +105,7 @@ extern "C" __declspec(dllexport) void gaussBlur(unsigned char* bitmapData, unsig
     }
 }
 
-extern "C" __declspec(dllexport) void gaussBlurStage1(unsigned char* bitmapData, unsigned char* tempData, double* kernel,
+extern "C" __declspec(dllexport) void gaussBlurStage1(unsigned char* bitmapData, unsigned char* tempData, float* kernel,
     int width, int height, int stride, int kernelSize,
     int startHeight, int endHeight) {
 
@@ -141,7 +116,7 @@ extern "C" __declspec(dllexport) void gaussBlurStage1(unsigned char* bitmapData,
         for (int x = 0; x < width; ++x) {
             int pixelIndex = y * stride + x * 3; // BMP uses 3 bytes per pixel (BGR format)
 
-            double blurredPixelR = 0, blurredPixelG = 0, blurredPixelB = 0;
+            float blurredPixelR = 0, blurredPixelG = 0, blurredPixelB = 0;
 
             for (int i = 0; i < kernelSize; ++i) {
                 int selectedX = x + (i - offset);
@@ -172,7 +147,7 @@ extern "C" __declspec(dllexport) void gaussBlurStage1(unsigned char* bitmapData,
     }
 }
 
-extern "C" __declspec(dllexport) void gaussBlurStage2(unsigned char* bitmapData, unsigned char* tempData, double* kernel,
+extern "C" __declspec(dllexport) void gaussBlurStage2(unsigned char* bitmapData, unsigned char* tempData, float* kernel,
     int width, int height, int stride, int kernelSize,
     int startHeight, int endHeight) {
 
@@ -184,7 +159,7 @@ extern "C" __declspec(dllexport) void gaussBlurStage2(unsigned char* bitmapData,
             int pixelIndex = y * stride + x * 3;
 
 
-            double blurredPixelR = 0, blurredPixelG = 0, blurredPixelB = 0;
+            float blurredPixelR = 0, blurredPixelG = 0, blurredPixelB = 0;
 
             for (int i = 0; i < kernelSize; ++i) {
                 int selectedY = y + (i - offset);

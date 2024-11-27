@@ -61,9 +61,14 @@
             textBoxEndThreadsNum = new TextBox();
             checkBoxDoublingEachIter = new CheckBox();
             label9 = new Label();
+            label10 = new Label();
+            trackBarRadius = new TrackBar();
+            label11 = new Label();
+            textRadiusVal = new TextBox();
             ((System.ComponentModel.ISupportInitialize)inputPicture).BeginInit();
             ((System.ComponentModel.ISupportInitialize)processedPicture).BeginInit();
             ((System.ComponentModel.ISupportInitialize)trackBar1).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)trackBarRadius).BeginInit();
             SuspendLayout();
             // 
             // inputPicture
@@ -118,7 +123,7 @@
             // 
             // kernelSizeTextBox
             // 
-            kernelSizeTextBox.Location = new Point(37, 320);
+            kernelSizeTextBox.Location = new Point(269, 323);
             kernelSizeTextBox.Margin = new Padding(3, 2, 3, 2);
             kernelSizeTextBox.Name = "kernelSizeTextBox";
             kernelSizeTextBox.Size = new Size(140, 23);
@@ -126,7 +131,7 @@
             // 
             // sigmaTextBox
             // 
-            sigmaTextBox.Location = new Point(205, 320);
+            sigmaTextBox.Location = new Point(437, 323);
             sigmaTextBox.Margin = new Padding(3, 2, 3, 2);
             sigmaTextBox.Name = "sigmaTextBox";
             sigmaTextBox.Size = new Size(140, 23);
@@ -135,7 +140,7 @@
             // blureConfigButton
             // 
             blureConfigButton.Font = new Font("Segoe UI", 11F);
-            blureConfigButton.Location = new Point(37, 347);
+            blureConfigButton.Location = new Point(269, 350);
             blureConfigButton.Margin = new Padding(3, 2, 3, 2);
             blureConfigButton.Name = "blureConfigButton";
             blureConfigButton.Size = new Size(100, 30);
@@ -147,29 +152,29 @@
             // labelKernelSize
             // 
             labelKernelSize.AutoSize = true;
-            labelKernelSize.Font = new Font("Segoe UI", 13F);
-            labelKernelSize.Location = new Point(37, 289);
+            labelKernelSize.Font = new Font("Segoe UI", 11F);
+            labelKernelSize.Location = new Point(269, 297);
             labelKernelSize.Name = "labelKernelSize";
-            labelKernelSize.Size = new Size(128, 25);
+            labelKernelSize.Size = new Size(107, 20);
             labelKernelSize.TabIndex = 16;
             labelKernelSize.Text = "Set kernel size ";
             // 
             // labelSigmaSize
             // 
             labelSigmaSize.AutoSize = true;
-            labelSigmaSize.Font = new Font("Segoe UI", 13F);
-            labelSigmaSize.Location = new Point(205, 289);
+            labelSigmaSize.Font = new Font("Segoe UI", 11F);
+            labelSigmaSize.Location = new Point(436, 297);
             labelSigmaSize.Name = "labelSigmaSize";
-            labelSigmaSize.Size = new Size(136, 25);
+            labelSigmaSize.Size = new Size(113, 20);
             labelSigmaSize.TabIndex = 13;
             labelSigmaSize.Text = "Set sigma value";
             // 
-            // labelAsmTestResult
+            // labelStatus
             // 
             labelStatus.AutoSize = true;
             labelStatus.ForeColor = SystemColors.ControlDark;
             labelStatus.Location = new Point(42, 757);
-            labelStatus.Name = "labelAsmTestResult";
+            labelStatus.Name = "labelStatus";
             labelStatus.Size = new Size(0, 15);
             labelStatus.TabIndex = 15;
             // 
@@ -459,17 +464,65 @@
             // 
             label9.AutoSize = true;
             label9.Font = new Font("Segoe UI", 11F);
-            label9.Location = new Point(37, 379);
+            label9.Location = new Point(269, 382);
             label9.Name = "label9";
-            label9.Size = new Size(278, 20);
+            label9.Size = new Size(283, 40);
             label9.TabIndex = 46;
-            label9.Text = "If not applied default values will be used";
+            label9.Text = "If applied radius value will be overwritten\r\nUse with caution or for experimenting.\r\n";
+            // 
+            // label10
+            // 
+            label10.AutoSize = true;
+            label10.Font = new Font("Segoe UI", 13F);
+            label10.Location = new Point(34, 292);
+            label10.Name = "label10";
+            label10.Size = new Size(95, 25);
+            label10.TabIndex = 48;
+            label10.Text = "Blur radius";
+            // 
+            // trackBarRadius
+            // 
+            trackBarRadius.BackColor = SystemColors.Control;
+            trackBarRadius.LargeChange = 8;
+            trackBarRadius.Location = new Point(34, 320);
+            trackBarRadius.Maximum = 200;
+            trackBarRadius.Minimum = 1;
+            trackBarRadius.Name = "trackBarRadius";
+            trackBarRadius.Size = new Size(195, 45);
+            trackBarRadius.TabIndex = 47;
+            trackBarRadius.Value = 10;
+            trackBarRadius.Scroll += trackBar2_Scroll;
+            // 
+            // label11
+            // 
+            label11.AutoSize = true;
+            label11.Font = new Font("Segoe UI", 13F);
+            label11.Location = new Point(269, 264);
+            label11.Name = "label11";
+            label11.Size = new Size(188, 25);
+            label11.TabIndex = 49;
+            label11.Text = "Additional parameters";
+            // 
+            // textRadiusVal
+            // 
+            textRadiusVal.Location = new Point(63, 356);
+            textRadiusVal.Margin = new Padding(3, 2, 3, 2);
+            textRadiusVal.Name = "textRadiusVal";
+            textRadiusVal.Size = new Size(140, 23);
+            textRadiusVal.TabIndex = 51;
+            textRadiusVal.TextAlign = HorizontalAlignment.Center;
+            textRadiusVal.TextChanged += textRadiusVal_TextChanged;
+            textRadiusVal.Leave += textRadiusVal_Leave;
             // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1680, 781);
+            Controls.Add(textRadiusVal);
+            Controls.Add(label11);
+            Controls.Add(label10);
+            Controls.Add(trackBarRadius);
             Controls.Add(label9);
             Controls.Add(checkBoxDoublingEachIter);
             Controls.Add(textBoxEndThreadsNum);
@@ -514,6 +567,7 @@
             ((System.ComponentModel.ISupportInitialize)inputPicture).EndInit();
             ((System.ComponentModel.ISupportInitialize)processedPicture).EndInit();
             ((System.ComponentModel.ISupportInitialize)trackBar1).EndInit();
+            ((System.ComponentModel.ISupportInitialize)trackBarRadius).EndInit();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -557,5 +611,9 @@
         private TextBox textBoxEndThreadsNum;
         private CheckBox checkBoxDoublingEachIter;
         private Label label9;
+        private Label label10;
+        private TrackBar trackBarRadius;
+        private Label label11;
+        private TextBox textRadiusVal;
     }
 }
