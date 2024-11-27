@@ -3,7 +3,6 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 
-//TODO push used registers in asm
 //TODO cleaning
 namespace JA_projekt_sem5 {
     public partial class Form1 : Form {

@@ -1,22 +1,26 @@
-.data
-    n           equ 14                          ; Array size constant
-    align 16
-    one_double  REAL8 1.0                       ; Definition of double variable 1.0
-    tabX    REAL8 16 dup(0.0)                   ; Double array for exp(x) results
-    ; testTabN    DWORD 16 dup(0)                 ; Int array for factorial
-    tabN QWORD 1.0, 2.0, 6.0, 24.0, 120.0, 720.0, 5040.0, 40320.0, 362880.0, 3628800.0, 39916800.0, 479001600.0, 6227020800.0, 87178291200.0, 1307674368000.0, 20922789888000.0
+.data   
 
-    two         REAL8 2.0                       ; Value 2.0 for multiplication
     pi          dd 3.14159265358979323846       ; Constant Pi as a float (32-bit)
     one         dd 1.0 
     neg_one     dd -1.0 
+
+    one_double  REAL8 1.0                       ; Definition of double variable 1.0
+    two         REAL8 2.0                       ; Value 2.0 for multiplication
+
+    n           equ 16                          ; Array size constant
+
+    align 16
+    tabX    REAL8 16 dup(0.0)                   ; Double array for exp(x) results
+    tabN    QWORD 1.0, 2.0, 6.0, 24.0, 120.0, 720.0, 5040.0, 40320.0, 362880.0, 3628800.0, 39916800.0, 479001600.0, 6227020800.0, 87178291200.0, 1307674368000.0, 20922789888000.0
 .code
 
 ;//////////////////////////////////
 ; Description:
-    ; calculates exp(x)
+    ; Calculates exp(x)
 ; Input: 
     ; xmm0 - x (float)
+; Output:
+    ; xmm0 - exp(x) (float)
 expAsm proc
 ; Save the state of general purpose registers
     push rbx
@@ -90,14 +94,16 @@ expAsm endp
     ; Generates a Gauss blur kernel of a specified size. 
     ; Given a kernel size and sigma value, the function calculates weights 
     ; that decrease with distance from the center, simulating the Gaussian function.
+    ; Generated kernel is saved at given pointer in R8 that should point at a float tab [kernelSize]. 
 ; Input: 
     ; xmm1 - sigma (flaot)
     ; CL - kernelSize (Byte)
-    ; R8 - pointer to tabK (float array) result saved here
+    ; R8 - pointer to tabK (float array) - result saved here
+; Output:
+    ; none
 createGaussianKernelAsm proc
 ; Save callee-saved registers to stack
     push rbx
-    push rcx
     push rdi
 
     lea rdi, [r8]           ; Load the kernel array pointer into the rdi register 
@@ -169,23 +175,33 @@ normalize_kernel_loop:
 
 ; Get saved registers from stack
     pop rdi
-    pop rcx
     pop rbx
 
     ret
 createGaussianKernelAsm endp
 ;//////////////////////////////////
 
+; gaussBlurStage1Asm and gaussBlurStage2Asm
+; Description:
+    ; A Gaussian blur using separable convolutions applies the blur
+    ; in two stages first horizontally across the image, then vertically.
+    ; Convolving each row of pixels with the given kernel horizontally
+    ; and each column of the intermediate result vertically.
+    ;              wait until all threads finish working \/                        |>>>>>>>>>>>>> output data
+    ;    gaussBlurStage1Asm(bitmapData, tempData, [...])   gaussBlurStage2Asm(bitmapData, tempData, [...])
+    ; input data >>>>>>>>>>>>>>>^          |>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>^
 
 ;//////////////////////////////////
 ; Description:
-    ; Separate procedure performing only the 1st stage (horizontall) of the Gaussian blur. 
+    ; Procedure performing only the 1st stage (horizontall) of the Gaussian blur. 
     ; Used in multithreading.
 ; Input: 
     ; rcx: bitmapData (pointing to bitmap data)
     ; rdx: array args [width, endHeight, stride, kernelSize, startHeight]
-    ; r8: *tempData
+    ; r8: *tempData - result saved here
     ; r9; *kernel
+; Output:
+    ; none - data is saved at tempData
 ;///////////////  
 ;Registers used:
     ; rax   tempVal, selectedIndex
@@ -247,7 +263,7 @@ y_loop_Stage1:
 x_loop_Stage1:
     cmp  rdx, r8                 ; if (x >= width), end loop
     jge  end_x_loop_Stage1
-    ; TODO may be mul instead of imul?
+
     ; Calculate pixel index (pixelIndex = y * stride + x * 3)
     mov   r12, rcx               ; r12 = y
     imul  r12, r10               ; r12 = y * stride
@@ -364,13 +380,15 @@ gaussBlurStage1Asm endp
 
 ;//////////////////////////////////
 ; Description:
-    ; Separate procedure performing only the 2nd stage (verticall) of the Gaussian blur. 
+    ; Procedure performing only the 2nd stage (verticall) of the Gaussian blur. 
     ; Used in multithreading.
 ; Input: 
-    ; rcx: bitmapData (pointing to bitmap data)
+    ; rcx: bitmapData (pointing to bitmap data) - result saved here (data will be overwritten)
     ; rdx: array args [width, height, stride, kernelSize, startHeight, endHeight]
-    ; r8: *tempData
+    ; r8: *tempData - result of 1st stage - we treat it as input
     ; r9; *kernel
+; Output:
+    ; none - data is saved at bitmapData
 ;///////////////  
 ;Registers used:
     ; rax   tempVal, selectedIndex
@@ -445,7 +463,7 @@ y_loop_Stage2:
 x_loop_Stage2:
     cmp  rdx, r8                ; if (x >= width), end loop
     jge  end_x_loop_Stage2
-    ; TODO may be mul instead of imul?
+
     ; Calculate pixel index (pixelIndex = y * stride + x * 3)
     mov   r12, rcx              ; r12 = y
     imul  r12, r10              ; r12 = y * stride
@@ -560,21 +578,12 @@ gaussBlurStage2Asm endp
 
 
 ;//////////////////////////////////
-; proc for testing if asm works
-MyProc1 proc
-; add RCX, RDX
-; mov RAX, RCX
-ret
-MyProc1 endp
-;//////////////////////////////////
-
-
-;//////////////////////////////////
 ; Description:
     ; A Gaussian blur procedure using separable convolutions applies the blur
     ; in two stages first horizontally across the image, then vertically.
     ; Convolving each row of pixels with the given kernel horizontally
     ; and each column of the intermediate result vertically.
+    ; Can by used when 1st and 2nd stage don't need to be separated (e.g. if one thread is used)
 ; Input: 
     ; rcx: bitmapData (pointing to bitmap data)
     ; rdx: array args [width, height, stride, kernelSize]
@@ -606,6 +615,8 @@ gaussBlurAsm proc
     push r13
     push r14
     push r15
+    push rsi
+    push rdi
     sub rsp, 8              ; 16 byte alignment
 
 ; Prepare parameters  
@@ -637,7 +648,7 @@ y_loop:
 x_loop:
     cmp  rdx, r8                 ; if (x >= width), end loop
     jge  end_x_loop
-    ; TODO may be mul instead of imul?
+
     ; Calculate pixel index (pixelIndex = y * stride + x * 3)
     mov   r12, rcx               ; r12 = y
     imul  r12, r10               ; r12 = y * stride
@@ -751,7 +762,7 @@ y_loop_2nd:
 x_loop_2nd:
     cmp  rdx, r8                 ; if (x >= width), end loop
     jge  end_x_loop_2nd
-    ; TODO may be mul instead of imul?
+
     ; Calculate pixel index (pixelIndex = y * stride + x * 3)
     mov   r12, rcx               ; r12 = y
     imul  r12, r10               ; r12 = y * stride
@@ -849,6 +860,8 @@ end_x_loop_2nd:
 end_y_loop_2nd:
 ; Get saved registers from stack
     add rsp, 8              ; Restores the stack
+    pop rdi
+    pop rsi
     pop r15
     pop r14
     pop r13
