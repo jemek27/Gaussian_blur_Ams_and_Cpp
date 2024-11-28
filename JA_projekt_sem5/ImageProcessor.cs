@@ -14,9 +14,8 @@ namespace JA_projekt_sem5 {
         private static extern void createGaussianKernel(Byte kernelSize, float sigma, float[] kernel);
 
         [DllImport(dllPath + "C_functions.dll")]
-        private static extern void gaussBlur(IntPtr bitmapData, byte[] tempBitmapData, double[] kernel,
-                                             int width, int height, int stride, int kernelSize,
-                                             int startHeight, int endHeight);
+        private static extern void gaussBlur(byte[] bitmapData, byte[] tempBitmapData, float[] kernel,
+                                             int width, int height, int stride, int kernelSize);
         [DllImport(dllPath + "C_functions.dll")]
         private static extern void gaussBlurStage1(byte[] bitmapData, byte[] tempBitmapData, float[] kernel,
                                                     int width, int height, int stride, int kernelSize,
@@ -83,57 +82,61 @@ namespace JA_projekt_sem5 {
                 byte[] bmpDataBuffer = new byte[stride * height];
                 Marshal.Copy(bmpData.Scan0, bmpDataBuffer, 0, bmpDataBuffer.Length);
 
-                int segmentHeight = height / numOfThreads;
-
                 float[] kernel = new float[kernelSize];
                 createGaussianKernel(kernelSize, sigma, kernel);
 
-                // Assign starting and ending values for each segment
-                Thread[] threads = new Thread[numOfThreads];
-                int[] startHeights = new int[numOfThreads];
-                int[] endHeights = new int[numOfThreads];
+                if (numOfThreads == 1) {
+                    gaussBlur(bmpDataBuffer, tempCanvas, kernel, width, height,
+                            stride, kernelSize);
+                } else {       
+                    int segmentHeight = height / numOfThreads;
 
-                // Segment the image
-                for (int i = 0; i < numOfThreads; ++i) {
-                    startHeights[i] = i * segmentHeight;
-                    endHeights[i] = (i + 1) * segmentHeight;
+                    // Assign starting and ending values for each segment
+                    Thread[] threads = new Thread[numOfThreads];
+                    int[] startHeights = new int[numOfThreads];
+                    int[] endHeights = new int[numOfThreads];
 
-                    if (i == numOfThreads - 1) { endHeights[i] = height; }
+                    // Segment the image
+                    for (int i = 0; i < numOfThreads; ++i) {
+                        startHeights[i] = i * segmentHeight;
+                        endHeights[i] = (i + 1) * segmentHeight;
+
+                        if (i == numOfThreads - 1) { endHeights[i] = height; }
+                    }
+
+                    // Vertical blur
+                    for (int i = 0; i < numOfThreads; ++i) {
+                        int start = startHeights[i];
+                        int end = endHeights[i];
+
+                        threads[i] = new Thread(() => {
+                            gaussBlurStage1(bmpDataBuffer, tempCanvas, kernel, width, height,
+                                            stride, kernelSize, start, end);
+                        });
+                        threads[i].Start();
+                    }
+
+                    // Wait for all vertical blur threads to finish
+                    foreach (var thread in threads) {
+                        thread.Join();
+                    }
+
+                    // Horizontal blur
+                    for (int i = 0; i < numOfThreads; ++i) {
+                        int start = startHeights[i];
+                        int end = endHeights[i];
+                        threads[i] = new Thread(() => {
+                            gaussBlurStage2(bmpDataBuffer, tempCanvas, kernel, width, height,
+                                            stride, kernelSize, start, end);
+                        });
+                        threads[i].Start();
+                    }
+
+                    // Wait for all horizontal blur threads to finish
+                    foreach (var thread in threads) {
+                        thread.Join();
+                    }
                 }
-
-                // Vertical blur
-                for (int i = 0; i < numOfThreads; ++i) {
-                    int start = startHeights[i];
-                    int end = endHeights[i];
-
-                    threads[i] = new Thread(() => {
-                        gaussBlurStage1(bmpDataBuffer, tempCanvas, kernel, width, height,
-                                        stride, kernelSize, start, end);
-                    });
-                    threads[i].Start();
-                }
-
-                // Wait for all vertical blur threads to finish
-                foreach (var thread in threads) {
-                    thread.Join();
-                }
-
-                // Horizontal blur
-                for (int i = 0; i < numOfThreads; ++i) {
-                    int start = startHeights[i];
-                    int end = endHeights[i];
-                    threads[i] = new Thread(() => {
-                        gaussBlurStage2(bmpDataBuffer, tempCanvas, kernel, width, height,
-                                        stride, kernelSize, start, end);
-                    });
-                    threads[i].Start();
-                }
-
-                // Wait for all horizontal blur threads to finish
-                foreach (var thread in threads) {
-                    thread.Join();
-                }
-
 
                 // Copy processed data back to the bitmap
                 Marshal.Copy(bmpDataBuffer, 0, bmpData.Scan0, bmpDataBuffer.Length);
@@ -165,71 +168,80 @@ namespace JA_projekt_sem5 {
                 byte[] bmpDataBuffer = new byte[stride * height];
                 Marshal.Copy(bmpData.Scan0, bmpDataBuffer, 0, bmpDataBuffer.Length);
 
-                int segmentHeight = height / numOfThreads;
-
                 float[] kernel = new float[kernelSize];
                 createGaussianKernelAsm(kernelSize, sigma, kernel);
 
-                // Assign starting and ending values for each segment
-                Thread[] threads = new Thread[numOfThreads];
-                int[] startHeights = new int[numOfThreads];
-                int[] endHeights = new int[numOfThreads];
-
-                // Segment the image
-                for (int i = 0; i < numOfThreads; ++i) {
-                    startHeights[i] = i * segmentHeight;
-                    endHeights[i] = (i + 1) * segmentHeight;
-
-                    if (i == numOfThreads - 1) { endHeights[i] = height; }
-                }
-
-                // Vertical blur
-                for (int i = 0; i < numOfThreads; ++i) {
-                    int start = startHeights[i];
-                    int end = endHeights[i];
-
+                if (numOfThreads == 1) {
                     int[] gaussBlurAsmArguments = new int[5];
-                    gaussBlurAsmArguments[0] = width;
-                    gaussBlurAsmArguments[1] = end;
-                    gaussBlurAsmArguments[2] = stride;
-                    gaussBlurAsmArguments[3] = kernelSize;
-                    gaussBlurAsmArguments[4] = start;
-
-                    threads[i] = new Thread(() => {
-                        gaussBlurStage1Asm(bmpDataBuffer, gaussBlurAsmArguments, tempCanvas, kernel);
-                    });
-                    threads[i].Start();
-                }
-
-                // Wait for all vertical blur threads to finish
-                foreach (var thread in threads) {
-                    thread.Join();
-                }
-
-                // Horizontal blur
-                for (int i = 0; i < numOfThreads; ++i) {
-                    int start = startHeights[i];
-                    int end = endHeights[i];
-
-                    int[] gaussBlurAsmArguments = new int[6];
                     gaussBlurAsmArguments[0] = width;
                     gaussBlurAsmArguments[1] = height;
                     gaussBlurAsmArguments[2] = stride;
                     gaussBlurAsmArguments[3] = kernelSize;
-                    gaussBlurAsmArguments[4] = start;
-                    gaussBlurAsmArguments[5] = end;
 
-                    threads[i] = new Thread(() => {
-                        gaussBlurStage2Asm(bmpDataBuffer, gaussBlurAsmArguments, tempCanvas, kernel);
-                    });
-                    threads[i].Start();
+                    gaussBlurAsm(bmpDataBuffer, gaussBlurAsmArguments, tempCanvas, kernel);
+                } else {
+                    int segmentHeight = height / numOfThreads;
+
+                    // Assign starting and ending values for each segment
+                    Thread[] threads = new Thread[numOfThreads];
+                    int[] startHeights = new int[numOfThreads];
+                    int[] endHeights = new int[numOfThreads];
+
+                    // Segment the image
+                    for (int i = 0; i < numOfThreads; ++i) {
+                        startHeights[i] = i * segmentHeight;
+                        endHeights[i] = (i + 1) * segmentHeight;
+
+                        if (i == numOfThreads - 1) { endHeights[i] = height; }
+                    }
+
+                    // Vertical blur
+                    for (int i = 0; i < numOfThreads; ++i) {
+                        int start = startHeights[i];
+                        int end = endHeights[i];
+
+                        int[] gaussBlurAsmArguments = new int[5];
+                        gaussBlurAsmArguments[0] = width;
+                        gaussBlurAsmArguments[1] = end;
+                        gaussBlurAsmArguments[2] = stride;
+                        gaussBlurAsmArguments[3] = kernelSize;
+                        gaussBlurAsmArguments[4] = start;
+
+                        threads[i] = new Thread(() => {
+                            gaussBlurStage1Asm(bmpDataBuffer, gaussBlurAsmArguments, tempCanvas, kernel);
+                        });
+                        threads[i].Start();
+                    }
+
+                    // Wait for all vertical blur threads to finish
+                    foreach (var thread in threads) {
+                        thread.Join();
+                    }
+
+                    // Horizontal blur
+                    for (int i = 0; i < numOfThreads; ++i) {
+                        int start = startHeights[i];
+                        int end = endHeights[i];
+
+                        int[] gaussBlurAsmArguments = new int[6];
+                        gaussBlurAsmArguments[0] = width;
+                        gaussBlurAsmArguments[1] = height;
+                        gaussBlurAsmArguments[2] = stride;
+                        gaussBlurAsmArguments[3] = kernelSize;
+                        gaussBlurAsmArguments[4] = start;
+                        gaussBlurAsmArguments[5] = end;
+
+                        threads[i] = new Thread(() => {
+                            gaussBlurStage2Asm(bmpDataBuffer, gaussBlurAsmArguments, tempCanvas, kernel);
+                        });
+                        threads[i].Start();
+                    }
+
+                    // Wait for all horizontal blur threads to finish
+                    foreach (var thread in threads) {
+                        thread.Join();
+                    }
                 }
-
-                // Wait for all horizontal blur threads to finish
-                foreach (var thread in threads) {
-                    thread.Join();
-                }
-
 
                 // Copy processed data back to the bitmap
                 Marshal.Copy(bmpDataBuffer, 0, bmpData.Scan0, bmpDataBuffer.Length);

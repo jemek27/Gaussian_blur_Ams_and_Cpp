@@ -1,9 +1,7 @@
 .data   
 
-    pi          dd 3.14159265358979323846       ; Constant Pi as a float (32-bit)
-    one         dd 1.0 
-    neg_one     dd -1.0 
-
+    pi          REAL8 3.14159265358979323846       ; Constant Pi as a float (32-bit)
+    neg_one     REAL8 -1.0                      ; Constant -1 as a double
     one_double  REAL8 1.0                       ; Definition of double variable 1.0
     two         REAL8 2.0                       ; Value 2.0 for multiplication
 
@@ -11,6 +9,7 @@
 
     align 16
     tabX    REAL8 16 dup(0.0)                   ; Double array for exp(x) results
+    ; precalculated factorial 1! ... 16! table
     tabN    QWORD 1.0, 2.0, 6.0, 24.0, 120.0, 720.0, 5040.0, 40320.0, 362880.0, 3628800.0, 39916800.0, 479001600.0, 6227020800.0, 87178291200.0, 1307674368000.0, 20922789888000.0
 .code
 
@@ -18,9 +17,9 @@
 ; Description:
     ; Calculates exp(x)
 ; Input: 
-    ; xmm0 - x (float)
+    ; xmm0 - x (double)
 ; Output:
-    ; xmm0 - exp(x) (float)
+    ; xmm0 - exp(x) (double)
 expAsm proc
 ; Save the state of general purpose registers
     push rbx
@@ -36,7 +35,6 @@ expAsm proc
 ; TabX operations - Calculating powers of x (e^x)
     lea rdi, [tabX]         ; Load the pointer to tabX into the RDI register
     xor rbx, rbx                ; Set RBX (index) to 0
-    cvtss2sd xmm0, xmm0         ; Convert float to double (xmm0)
     movsd xmm1, xmm0            ; Store x in xmm1
 
 ; Exponentiation (e^x) with factorial
@@ -72,7 +70,7 @@ sum_loop:
 
 end_sum:
     movsd xmm0, xmm2             ; Move sum to xmm0
-    cvtsd2ss xmm0, xmm0          ; convert double back to float
+
 
 ; Restore registers
     movdqu xmm1, [rsp]           ; Restore xmm0
@@ -94,7 +92,8 @@ expAsm endp
     ; Generates a Gauss blur kernel of a specified size. 
     ; Given a kernel size and sigma value, the function calculates weights 
     ; that decrease with distance from the center, simulating the Gaussian function.
-    ; Generated kernel is saved at given pointer in R8 that should point at a float tab [kernelSize]. 
+    ; Generated kernel is saved at given pointer in R8 that should point at a float tab [kernelSize].
+    ; Inner calculation are performed on doubles
 ; Input: 
     ; xmm1 - sigma (flaot)
     ; CL - kernelSize (Byte)
@@ -116,11 +115,13 @@ createGaussianKernelAsm proc
     mulss xmm1, xmm1        ; sigma^2
     movss xmm6, xmm1        ; xmm6 = sigma^2
     addss xmm6, xmm6        ; xmm6 = 2 * sigma^2
+    cvtss2sd xmm6, xmm6
 
     ; sqrt(2 * M_PI * sigma^2)
-    movss xmm8, dword ptr [pi]  ; Load M_PI value
-    mulss xmm8, xmm6            ; xmm8 = M_PI * (2 * sigma^2) 
-    sqrtss xmm8, xmm8           ; xmm8 = sqrt(2 * sigma^2 * M_PI)
+    movsd xmm8, qword ptr [pi]  ; Load M_PI value
+    mulsd xmm8, xmm6            ; xmm8 = M_PI * (2 * sigma^2) 
+
+    sqrtsd xmm8, xmm8           ; xmm8 = sqrt(2 * sigma^2 * M_PI)
 
     xorps xmm3, xmm3        ; Zero sum (xmm3) - will store the sum of the results
     xorps xmm4, xmm4        
@@ -128,36 +129,37 @@ createGaussianKernelAsm proc
     ; Set index x to kernelSize / -2
     sar rax, 1              ; Divide by 2 to get -kernelSize / 2
     neg rax                 ; Make -kernelSize in rax
-    cvtsi2ss xmm4, rax      ; Load x (index) into xmm4 as float
+    cvtsi2sd xmm4, rax      ; Load x (index) into xmm4 as float
 
-    movss xmm10, [one]      ; Load value 1.0 into xmm0
+    movsd xmm10, [one_double]      ; Load value 1.0 into xmm10
 
 fill_kernel_loop:
 ; Calculate Gauss 1D G(x) = exp(-x^2 / (2 * sigma^2)) / sqrt(2 * M_PI * sigma^2)
 ; Calculate x^2
-    movss xmm5, xmm4
-    mulss xmm5, xmm5           ; xmm5 = x^2
+    movsd xmm5, xmm4
+    mulsd xmm5, xmm5           ; xmm5 = x^2
 
 ; -x^2 / (2 * sigma^2)
-    divss xmm5, xmm6           ; xmm5 = x^2 / (2 * sigma^2)
+    divsd xmm5, xmm6           ; xmm5 = x^2 / (2 * sigma^2)
 
-    movss xmm0, [neg_one]
-    mulss xmm5, xmm0           ; xmm5 = -x^2 / (2 * sigma^2)
+    movsd xmm0, [neg_one]
+    mulsd xmm5, xmm0           ; xmm5 = -x^2 / (2 * sigma^2)
  
 ; exp(-x^2 / (2 * sigma^2))
-    movss xmm0, xmm5
+    movsd xmm0, xmm5
 
     call expAsm                   ; call exp function, result in xmm0
 
 ; G(x) = exp(-x^2 / (2 * sigma^2)) / sqrt(2 * M_PI * sigma^2)
-    divss xmm0, xmm8           ; xmm0 = G(x)
+    divsd xmm0, xmm8           ; xmm0 = G(x)
+    cvtsd2ss xmm0, xmm0
 
 ; Insert the result into the kernel[i] array 
     movss dword ptr [rdi + rbx * 4], xmm0 ; Write the result to kernel[rbx]
 
     addss xmm3, xmm0        ; sum += G(x)
 
-    addss xmm4, xmm10       ; xmm4 + 1
+    addsd xmm4, xmm10       ; xmm4 + 1
     inc rbx
     cmp rbx, rcx
     jl fill_kernel_loop     ; If i < kernelSize, loop back
@@ -589,6 +591,8 @@ gaussBlurStage2Asm endp
     ; rdx: array args [width, height, stride, kernelSize]
     ; r8: *tempData
     ; r9; *kernel
+; Output:
+    ; none - data is saved at bitmapData
 ;Registers used:
     ; rax   tempVal, selectedIndex
     ; rbx   tempVal, pixelIndex 
