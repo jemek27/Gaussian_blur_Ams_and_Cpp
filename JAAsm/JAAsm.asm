@@ -10,12 +10,13 @@
     align 16
     tabX    REAL8 16 dup(0.0)                   ; Double array for exp(x) results
     ; precalculated factorial 1! ... 16! table
-    tabN    QWORD 1.0, 2.0, 6.0, 24.0, 120.0, 720.0, 5040.0, 40320.0, 362880.0, 3628800.0, 39916800.0, 479001600.0, 6227020800.0, 87178291200.0, 1307674368000.0, 20922789888000.0
+    tabN    REAL8 1.0, 2.0, 6.0, 24.0, 120.0, 720.0, 5040.0, 40320.0, 362880.0, 3628800.0, 39916800.0, 479001600.0, 6227020800.0, 87178291200.0, 1307674368000.0, 20922789888000.0
 .code
 
 ;//////////////////////////////////
 ; Description:
     ; Calculates exp(x)
+    ; sacing rax, xmm1, xmm2 so the caller doesn't have to
 ; Input: 
     ; xmm0 - x (double)
 ; Output:
@@ -51,26 +52,34 @@ end_of_x_powers:
     lea rsi, [tabN]             ; Read the tabN pointer into the RSI register
 
     xor rbx, rbx                ; Set RBX (index) to 0
-    pxor xmm2, xmm2             ; Reset xmm2 (sum)
+    VXORPS ymm2, ymm2, ymm2     ; Reset xmm2 (sum)
     movsd xmm2, [one_double]    ; Load 1.0 into xmm0 (double) (first elemet of Tylor expansion)
 
-sum_loop:
-; Operation sum += tab[i] / tab[i] 
-    cmp rbx, n              ; Check if RBX (index) does not exceed the size of the array
-    je end_sum              ; If so, end the loop
+; Operation sum += tabX[i] / tab![i] could use loop by hard code is better in performance
+    vmovupd ymm0, qword ptr [rdi]       ; Load tabX[0-3] into ymm0
+    vmovupd ymm1, qword ptr [rsi]       ; Load tabN[0-3] into ymm1
+    vdivpd ymm0, ymm0, ymm1             ; Division of elements ymm0 by ymm1
+    vaddpd ymm2, ymm2, ymm0             ; Add elements of ymm0 and ymm2: ymm2 = [a0+b0, a1+b1, a2+b2, a3+b3]
+;//////
+    vmovupd ymm0, qword ptr [rdi + 8 * 4]       ; Load tabX[4-7] into ymm0
+    vmovupd ymm1, qword ptr [rsi + 8 * 4]       ; Load tabN[4-7] into ymm1
+    vdivpd ymm0, ymm0, ymm1                     ; Division of elements ymm0 by ymm1
+    vaddpd ymm2, ymm2, ymm0                     ; Add elements of ymm0 and ymm2: ymm2 = [a0+b0, a1+b1, a2+b2, a3+b3]
+;//////
+    vmovupd ymm0, qword ptr [rdi + 8 * 8]       ; Load tabX[8-11] into ymm0
+    vmovupd ymm1, qword ptr [rsi + 8 * 8]       ; Load tabN[8-11] into ymm1
+    vdivpd ymm0, ymm0, ymm1                     ; Division of elements ymm0 by ymm1
+    vaddpd ymm2, ymm2, ymm0                      ; Add elements of ymm0 and ymm2: ymm2 = [a0+b0, a1+b1, a2+b2, a3+b3]
+;//////
+    vmovupd ymm0, qword ptr [rdi + 8 * 12]      ; Load tabX[12-15] into ymm0
+    vmovupd ymm1, qword ptr [rsi + 8 * 12]      ; Load tabN[12-15] into ymm1
+    vdivpd ymm0, ymm0, ymm1                     ; Division of elements ymm0 by ymm1
+    vaddpd ymm2, ymm2, ymm0                     ; Add elements of ymm0 and ymm2: ymm2 = [a0+b0, a1+b1, a2+b2, a3+b3]
+;//////
+    vperm2f128 ymm1, ymm2, ymm2, 1              ; Move upper half of ymm2 to ymm1
+    vaddpd ymm0, ymm2, ymm1                     ; Add lower and upper halves: ymm0 = [a0+b0+a2+b2, a1+b1+a3+b3, -, -]
 
-    movsd xmm0, qword ptr [rdi + rbx * 8]       ; Load tabX[i] into xmm0
-    movsd xmm1, qword ptr [rsi + rbx * 8]       ; Load tabN[i] 
-    divsd xmm0, xmm1                            ; xmm0 = tabX[i] / double(tabN[i])
-
-    addsd xmm2, xmm0                            ; Add the result of division to the sum (in xmm2)
-
-    inc rbx                                     ; ++index
-    jmp sum_loop                                ; loop back
-
-end_sum:
-    movsd xmm0, xmm2             ; Move sum to xmm0
-
+    HADDPD xmm0, xmm0                           ; Add lower and upper halves: xmm0 = [a0+b0+a2+b2 + a1+b1+a3+b3, -]
 
 ; Restore registers
     movdqu xmm1, [rsp]           ; Restore xmm0
