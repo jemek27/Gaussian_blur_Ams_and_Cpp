@@ -1,9 +1,3 @@
-using System.Diagnostics;
-using System.Drawing;
-using System.Drawing.Imaging;
-using System.Runtime.InteropServices;
-
-
 namespace JA_projekt_sem5 {
     public partial class Form1 : Form {
 

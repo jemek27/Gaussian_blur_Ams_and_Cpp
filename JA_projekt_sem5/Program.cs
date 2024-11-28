@@ -1,7 +1,4 @@
 
-
-using System.Runtime.InteropServices;
-
 namespace JA_projekt_sem5
 {
     internal static class Program
