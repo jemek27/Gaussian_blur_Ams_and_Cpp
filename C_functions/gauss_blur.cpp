@@ -109,7 +109,6 @@ extern "C" __declspec(dllexport) void gaussBlurStage2(unsigned char* bitmapData,
                 blurredPixelR += tempData[selectedIndex + 2] * kernel[i];
             }
 
-
             bitmapData[pixelIndex] = static_cast<unsigned char>(std::round(blurredPixelB));
             bitmapData[pixelIndex + 1] = static_cast<unsigned char>(std::round(blurredPixelG));
             bitmapData[pixelIndex + 2] = static_cast<unsigned char>(std::round(blurredPixelR));
@@ -152,7 +151,7 @@ extern "C" __declspec(dllexport) void gaussBlur(unsigned char* bitmapData, unsig
                 blurredPixelR += bitmapData[selectedIndex + 2] * kernel[i];
             }
 
-            tempData[pixelIndex] = static_cast<unsigned char>(std::round(blurredPixelB));
+            tempData[pixelIndex]     = static_cast<unsigned char>(std::round(blurredPixelB));
             tempData[pixelIndex + 1] = static_cast<unsigned char>(std::round(blurredPixelG));
             tempData[pixelIndex + 2] = static_cast<unsigned char>(std::round(blurredPixelR));
         }
@@ -189,9 +188,9 @@ extern "C" __declspec(dllexport) void gaussBlur(unsigned char* bitmapData, unsig
                 blurredPixelR += tempData[selectedIndex + 2] * kernel[i];
             }
 
-            bitmapData[pixelIndex] = static_cast<unsigned char>(std::round(blurredPixelB));
-            bitmapData[pixelIndex + 1] = static_cast<unsigned char>(std::round(blurredPixelG));
-            bitmapData[pixelIndex + 2] = static_cast<unsigned char>(std::round(blurredPixelR));
+            bitmapData[pixelIndex]      = static_cast<unsigned char>(std::round(blurredPixelB));
+            bitmapData[pixelIndex + 1]  = static_cast<unsigned char>(std::round(blurredPixelG));
+            bitmapData[pixelIndex + 2]  = static_cast<unsigned char>(std::round(blurredPixelR));
         }
     }
 }

@@ -351,7 +351,8 @@ continue_Stage1:
     jmp i_loop_Stage1              ; back to I loop
 
 end_i_loop_Stage1:
-    ; save blured pixel in temp
+; save blured pixel in temp
+    ROUNDPS xmm1, xmm0, 0               ; Round all floats in xmm0 to nearest
     ; 1. Extract 1st value from xmm0
     cvttss2si eax, xmm0                 ; Conversion float -> int
     mov byte ptr [r15 + r12], al        ; Save the result as a byte
@@ -548,7 +549,8 @@ i_skip_Stage2:
     jmp i_loop_Stage2              ; back to I loop
 
 end_i_loop_Stage2:
-    ; save blured pixel in Img
+; save blured pixel in Img
+    ROUNDPS xmm0, xmm0, 0               ; Round all floats in xmm0 to nearest
     ; 1. Extract 1st value from xmm0
     cvttss2si eax, xmm0                 ; Conversion float -> int
     mov byte ptr [rsi + r12], al        ; Save the result as a byte
@@ -738,7 +740,8 @@ continue:
     jmp i_loop                     ; back to I loop
 
 end_i_loop:
-    ; save blured pixel in temp
+; save blured pixel in temp
+    ROUNDPS xmm0, xmm0, 0               ; Round all floats in xmm0 to nearest
     ; 1. Extract 1st value from xmm0
     cvttss2si eax, xmm0                 ; Conversion float -> int
     mov byte ptr [r15 + r12], al        ; Save the result as a byte
@@ -848,7 +851,8 @@ i_skip_2nd:
     jmp i_loop_2nd                 ; back to I loop
 
 end_i_loop_2nd:
-    ; save blured pixel in Img
+; save blured pixel in Img
+    ROUNDPS xmm0, xmm0, 0               ; Round all floats in xmm0 to nearest
     ; 1. Extract 1st value from xmm0
     cvttss2si eax, xmm0                 ; Conversion float -> int
     mov byte ptr [rsi + r12], al        ; Save the result as a byte
