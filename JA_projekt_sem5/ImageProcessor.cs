@@ -84,13 +84,11 @@ namespace JA_projekt_sem5 {
                 if (numOfThreads == 1) {
                     gaussBlur(bmpDataBuffer, tempCanvas, kernel, width, height,
                             stride, kernelSize);
-                } else {       
-                    int segmentHeight = height / numOfThreads;
-
-                    // Assign starting and ending values for each segment
+                } else {                          
                     Thread[] threads = new Thread[numOfThreads];
                     int[] startHeights = new int[numOfThreads];
                     int[] endHeights = new int[numOfThreads];
+                    int segmentHeight = height / numOfThreads;
 
                     // Segment the image
                     for (int i = 0; i < numOfThreads; ++i) {
@@ -176,12 +174,10 @@ namespace JA_projekt_sem5 {
 
                     gaussBlurAsm(bmpDataBuffer, gaussBlurAsmArguments, tempCanvas, kernel);
                 } else {
-                    int segmentHeight = height / numOfThreads;
-
-                    // Assign starting and ending values for each segment
                     Thread[] threads = new Thread[numOfThreads];
                     int[] startHeights = new int[numOfThreads];
                     int[] endHeights = new int[numOfThreads];
+                    int segmentHeight = height / numOfThreads;
 
                     // Segment the image
                     for (int i = 0; i < numOfThreads; ++i) {

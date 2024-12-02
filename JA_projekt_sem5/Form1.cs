@@ -14,6 +14,7 @@ namespace JA_projekt_sem5 {
 
         public Form1() {
             InitializeComponent();
+            this.Text = "Gaussian blur cpp-ams";
             imageProcessor = new ImageProcessor();
         }
 
@@ -30,6 +31,8 @@ namespace JA_projekt_sem5 {
                 float sigma = float.Parse(sigmaTextBox.Text);
                 imageProcessor.updateKernelConfig(kernelSize, sigma);
                 useRadius = false;
+                labelStatus.Text = $"Updated. kernel size = {kernelSize}, sigma = {sigma}";
+                labelStatus.Refresh();
             } catch (FormatException ex) {
                 MessageBox.Show("Input format is incorrect: " + ex.Message);
             }
@@ -64,6 +67,7 @@ namespace JA_projekt_sem5 {
             } else {
                 labelStatus.Text = "Image blur failed";
             }
+            labelStatus.Refresh();
         }
 
         private void SaveButton_Click(object sender, EventArgs e) {

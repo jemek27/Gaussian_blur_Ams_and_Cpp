@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Diagnostics.Metrics;
 
 
 namespace JA_projekt_sem5 {
@@ -6,8 +7,6 @@ namespace JA_projekt_sem5 {
 
         private long totalTestTimeCpp = 0;
         private long totalTestTimeAsm = 0;
-        private long tempTestTimeCpp = 0;
-        private long tempTestTimeAsm = 0;
         private int testIterations = 1;
         private int testStartThreadsNum = 1;
         private int testEndThreadsNum = 64;
@@ -72,22 +71,37 @@ namespace JA_projekt_sem5 {
         }
 
         private void runTestButton_Click(object sender, EventArgs e) {
-            const string imgPath = "..\\..\\..\\..\\..\\assets\\";
-            const string csvHistoryPath = "..\\..\\..\\..\\..\\testTimeHistory.csv";
-            const string csvTestTimePath = "..\\..\\..\\..\\..\\testTime.csv";
+            const string basePath = "..\\..\\..\\..\\..\\";
+            const string imgPath = basePath + "assets\\";
+            const string csvPath = basePath + "test_results\\";
+
+            string fileNameInfos = $"-K{imageProcessor.getKernelSize()}-I{testIterations}-S{testStartThreadsNum}-E{testEndThreadsNum}-D{checkBoxDoublingEachIter.Checked}.csv";
+            string csvHistoryPath = csvPath + "testTimeHistory" + fileNameInfos;
+            string csvTestTimePath = csvPath + "testTime" + fileNameInfos;
+
             Bitmap bitmapSmall = ConvertImageToBitmap(imgPath + "sum-ryba-900x450.bmp");
             Bitmap bitmapMedium = ConvertImageToBitmap(imgPath + "krolWod.bmp");
             Bitmap bitmapBig = ConvertImageToBitmap(imgPath + "PXL_20240915_075912464.bmp");
 
             Byte kernelSize = imageProcessor.getKernelSize();
-            Stopwatch stopwatch = new Stopwatch();
+            
             String csvDataBuffer = "";
+            String csvDataBufferEachIteration = "";
+            String testsPerformed = "";
+
+            if (checkBoxSmall.Checked) { testsPerformed += "S"; }
+            if (checkBoxMedium.Checked) { testsPerformed += "M"; }
+            if (checkBoxBig.Checked) { testsPerformed += "B"; }
+
             int testNumOfThreads = testStartThreadsNum;
 
             // Select the appropriate lambda based on the checkbox state
             Action incrementAction = checkBoxDoublingEachIter.Checked
                 ? () => testNumOfThreads *= 2
                 : () => ++testNumOfThreads;
+
+            labelStatus.Text = "Start Test";
+            labelStatus.Refresh();
 
             bool testRunning = true;
             for (; testRunning; incrementAction()) {
@@ -101,102 +115,23 @@ namespace JA_projekt_sem5 {
                 int counter = testIterations;
 
                 if (checkBoxSmall.Checked) {
-                    while (counter > 0) {
-                        --counter;
-                        stopwatch.Start();
-                        imageProcessor.applyGaussianBlurCpp(bitmapSmall, testNumOfThreads);
-                        stopwatch.Stop();
-
-                        tempTestTimeCpp += stopwatch.ElapsedMilliseconds;
-                        stopwatch.Restart();
-
-                        //////////////////////
-
-                        stopwatch.Start();
-                        imageProcessor.applyGaussianBlurAsm(bitmapSmall, testNumOfThreads);
-                        stopwatch.Stop();
-
-                        tempTestTimeAsm += stopwatch.ElapsedMilliseconds;
-                        stopwatch.Restart();
-                        labelStatus.Text = $"Test completed: small image, iteration {counter}, threads = {testNumOfThreads}";
-                        labelStatus.Refresh();
-                    }
-                    csvDataBuffer += $"{tempTestTimeCpp},{tempTestTimeAsm},small,{testNumOfThreads},{testIterations},{kernelSize} \n";
-                    totalTestTimeCpp += tempTestTimeCpp;
-                    totalTestTimeAsm += tempTestTimeAsm;
-                    tempTestTimeCpp = 0;
-                    tempTestTimeAsm = 0;
-                    counter = testIterations;
+                    runTest("small", counter, bitmapSmall, testNumOfThreads, ref csvDataBuffer, ref csvDataBufferEachIteration);
                 }
                 if (checkBoxMedium.Checked) {
-                    while (counter > 0) {
-                        --counter;
-                        stopwatch.Start();
-                        imageProcessor.applyGaussianBlurCpp(bitmapMedium, testNumOfThreads);
-                        stopwatch.Stop();
-
-                        tempTestTimeCpp += stopwatch.ElapsedMilliseconds;
-                        stopwatch.Restart();
-
-                        //////////////////////
-
-                        stopwatch.Start();
-                        imageProcessor.applyGaussianBlurAsm(bitmapMedium, testNumOfThreads);
-                        stopwatch.Stop();
-
-                        tempTestTimeAsm += stopwatch.ElapsedMilliseconds;
-                        stopwatch.Restart();
-                        labelStatus.Text = $"Test completed: small image, iteration {counter}, threads = {testNumOfThreads}";
-                        labelStatus.Refresh();
-                    }
-                    csvDataBuffer += $"{tempTestTimeCpp},{tempTestTimeAsm},medium,{testNumOfThreads},{testIterations},{kernelSize} \n";
-                    totalTestTimeCpp += tempTestTimeCpp;
-                    totalTestTimeAsm += tempTestTimeAsm;
-                    tempTestTimeCpp = 0;
-                    tempTestTimeAsm = 0;
-                    counter = testIterations;
+                    runTest("medium", counter, bitmapMedium, testNumOfThreads, ref csvDataBuffer, ref csvDataBufferEachIteration);
                 }
                 if (checkBoxBig.Checked) {
-                    while (counter > 0) {
-                        --counter;
-                        stopwatch.Start();
-                        imageProcessor.applyGaussianBlurCpp(bitmapBig, testNumOfThreads);
-                        stopwatch.Stop();
-
-                        tempTestTimeCpp += stopwatch.ElapsedMilliseconds;
-                        stopwatch.Restart();
-
-                        //////////////////////
-
-                        stopwatch.Start();
-                        imageProcessor.applyGaussianBlurAsm(bitmapBig, testNumOfThreads);
-                        stopwatch.Stop();
-
-                        tempTestTimeAsm += stopwatch.ElapsedMilliseconds;
-                        stopwatch.Restart();
-                        labelStatus.Text = $"Test completed: small image, iteration {counter}, threads = {testNumOfThreads}";
-                        labelStatus.Refresh();
-                    }
-                    csvDataBuffer += $"{tempTestTimeCpp},{tempTestTimeAsm},big,{testNumOfThreads},{testIterations},{kernelSize} \n";
-                    totalTestTimeCpp += tempTestTimeCpp;
-                    totalTestTimeAsm += tempTestTimeAsm;
-                    tempTestTimeCpp = 0;
-                    tempTestTimeAsm = 0;
-                    counter = testIterations;
+                    runTest("big", counter, bitmapBig, testNumOfThreads, ref csvDataBuffer, ref csvDataBufferEachIteration);
                 }
-                csvDataBuffer += $"{totalTestTimeCpp},{totalTestTimeAsm},all,{testNumOfThreads},{testIterations},{kernelSize} \n";
+                csvDataBuffer += $"{totalTestTimeCpp},{totalTestTimeAsm},all,{testNumOfThreads},{testIterations}\n";
 
-
-                timeCppLabel.Text = ConvertMillisecondsToTimeFormat(totalTestTimeCpp);
-                timeAsmLabel.Text = ConvertMillisecondsToTimeFormat(totalTestTimeAsm);
-                timeCppLabel.Refresh();  // Force immediate label update
-                timeAsmLabel.Refresh();
                 totalTestTimeCpp = 0;
                 totalTestTimeAsm = 0;
             }
 
             csvDataBuffer = csvDataBuffer.Remove(csvDataBuffer.Length - 1); // last \n is not needed
 
+            SaveToCsv(csvPath + testsPerformed + fileNameInfos, csvDataBufferEachIteration, false);
             SaveToCsv(csvTestTimePath, csvDataBuffer, false);
             SaveToCsv(csvHistoryPath, csvDataBuffer);
         }
@@ -215,12 +150,57 @@ namespace JA_projekt_sem5 {
 
             using (StreamWriter writer = new StreamWriter(filePath, append: append)) {
                 if (!fileExists || !append) { //if not exists or when overwriting
-                    writer.WriteLine("Time-cpp-ms,Time-asm-ms,sizeName,Threads,Number-of-iterations,Kernel-size");
+                    writer.WriteLine("Size-name,Time-cpp-ms,Time-asm-ms,Threads,Iterations");
                 }
 
                 writer.WriteLine(dataRows);
                 labelStatus.Text = "saved to csv";
             }
+        }
+
+        private void runTest(String sizeName, int counter, Bitmap bitmap, int testNumOfThreads, 
+                             ref String csvDataBuffer, ref String csvDataBufferEachIteration) {
+            Stopwatch stopwatch = new Stopwatch();
+            long timeCpp = 0;
+            long timeAsm = 0;
+            long tempTestTimeCpp = 0;
+            long tempTestTimeAsm = 0;
+
+            while (counter > 0) {
+                --counter;
+                stopwatch.Start();
+                imageProcessor.applyGaussianBlurCpp(bitmap, testNumOfThreads);
+                stopwatch.Stop();
+
+                timeCpp = stopwatch.ElapsedMilliseconds;
+                tempTestTimeCpp += timeCpp;
+                stopwatch.Restart();
+
+                //////////////////////
+
+                stopwatch.Start();
+                imageProcessor.applyGaussianBlurAsm(bitmap, testNumOfThreads);
+                stopwatch.Stop();
+
+                timeAsm = stopwatch.ElapsedMilliseconds;
+                tempTestTimeAsm += timeAsm;
+                stopwatch.Restart();
+
+                csvDataBufferEachIteration += $"{sizeName},{timeCpp},{timeAsm},{testNumOfThreads},{testIterations - counter} \n";
+
+                labelStatus.Text = $"Test completed: {sizeName} image, iteration {counter}, threads = {testNumOfThreads}";
+                labelStatus.Refresh();
+            }
+            csvDataBuffer += $"{sizeName},{tempTestTimeCpp},{tempTestTimeAsm},{testNumOfThreads},{testIterations}\n";
+            totalTestTimeCpp += tempTestTimeCpp;
+            totalTestTimeAsm += tempTestTimeAsm;
+            tempTestTimeCpp = 0;
+            tempTestTimeAsm = 0;
+            counter = testIterations;
+            timeCppLabel.Text = ConvertMillisecondsToTimeFormat(totalTestTimeCpp);
+            timeAsmLabel.Text = ConvertMillisecondsToTimeFormat(totalTestTimeAsm);
+            timeCppLabel.Refresh();  // Force immediate label update
+            timeAsmLabel.Refresh();
         }
     }
 }
