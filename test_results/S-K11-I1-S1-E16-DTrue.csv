@@ -1,0 +1,7 @@
+Size-name,Time-cpp-ms,Time-asm-ms,Threads,Iterations
+small,361,64,1,1 
+small,259,202,2,1 
+small,470,249,4,1 
+small,708,391,8,1 
+small,1078,745,16,1 
+

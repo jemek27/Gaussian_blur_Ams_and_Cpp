@@ -1,0 +1,9 @@
+Size-name,Time-cpp-ms,Time-asm-ms,Threads,Iterations
+medium,6829,2080,1,1 
+medium,3615,1468,2,1 
+medium,2328,1170,4,1 
+medium,2466,1552,8,1 
+medium,3088,1934,16,1 
+medium,4454,3176,32,1 
+medium,7291,6025,64,1 
+
