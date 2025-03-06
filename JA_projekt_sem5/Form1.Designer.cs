@@ -65,6 +65,7 @@
             trackBarRadius = new TrackBar();
             label11 = new Label();
             textRadiusVal = new TextBox();
+            buttonGenerateChart = new Button();
             ((System.ComponentModel.ISupportInitialize)inputPicture).BeginInit();
             ((System.ComponentModel.ISupportInitialize)processedPicture).BeginInit();
             ((System.ComponentModel.ISupportInitialize)trackBar1).BeginInit();
@@ -515,11 +516,24 @@
             textRadiusVal.TextChanged += textRadiusVal_TextChanged;
             textRadiusVal.Leave += textRadiusVal_Leave;
             // 
+            // buttonGenerateChart
+            // 
+            buttonGenerateChart.Font = new Font("Segoe UI", 11F);
+            buttonGenerateChart.Location = new Point(187, 608);
+            buttonGenerateChart.Margin = new Padding(3, 2, 3, 2);
+            buttonGenerateChart.Name = "buttonGenerateChart";
+            buttonGenerateChart.Size = new Size(120, 30);
+            buttonGenerateChart.TabIndex = 52;
+            buttonGenerateChart.Text = "Generate chart";
+            buttonGenerateChart.UseVisualStyleBackColor = true;
+            buttonGenerateChart.Click += buttonGenerateChart_Click;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1680, 781);
+            Controls.Add(buttonGenerateChart);
             Controls.Add(textRadiusVal);
             Controls.Add(label11);
             Controls.Add(label10);
@@ -616,5 +630,6 @@
         private TrackBar trackBarRadius;
         private Label label11;
         private TextBox textRadiusVal;
+        private Button buttonGenerateChart;
     }
 }

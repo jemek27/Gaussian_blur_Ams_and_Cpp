@@ -1,15 +1,23 @@
-﻿using System.Diagnostics;
+﻿using Microsoft.VisualBasic;
+using System.Diagnostics;
 using System.Diagnostics.Metrics;
 
 
 namespace JA_projekt_sem5 {
     public partial class Form1 : Form {
 
+        const string basePath = "..\\..\\..\\..\\..\\";
+        const string imgPath = basePath + "assets\\";
+        const string csvPath = basePath + "test_results\\";
+ 
+
         private long totalTestTimeCpp = 0;
         private long totalTestTimeAsm = 0;
         private int testIterations = 1;
         private int testStartThreadsNum = 1;
         private int testEndThreadsNum = 64;
+
+        private string lastDataFileName = "";
 
 
         private void checkBoxAll_CheckedChanged(object sender, EventArgs e) {
@@ -71,10 +79,6 @@ namespace JA_projekt_sem5 {
         }
 
         private void runTestButton_Click(object sender, EventArgs e) {
-            const string basePath = "..\\..\\..\\..\\..\\";
-            const string imgPath = basePath + "assets\\";
-            const string csvPath = basePath + "test_results\\";
-
             string fileNameInfos = $"-K{imageProcessor.getKernelSize()}-I{testIterations}-S{testStartThreadsNum}-E{testEndThreadsNum}-D{checkBoxDoublingEachIter.Checked}.csv";
             string csvHistoryPath = csvPath + "testTimeHistory" + fileNameInfos;
             string csvTestTimePath = csvPath + "testTime" + fileNameInfos;
@@ -123,7 +127,7 @@ namespace JA_projekt_sem5 {
                 if (checkBoxBig.Checked) {
                     runTest("big", counter, bitmapBig, testNumOfThreads, ref csvDataBuffer, ref csvDataBufferEachIteration);
                 }
-                csvDataBuffer += $"{totalTestTimeCpp},{totalTestTimeAsm},all,{testNumOfThreads},{testIterations}\n";
+                csvDataBuffer += $"all,{totalTestTimeCpp},{totalTestTimeAsm},{testNumOfThreads},{testIterations}\n";
 
                 totalTestTimeCpp = 0;
                 totalTestTimeAsm = 0;
@@ -134,6 +138,35 @@ namespace JA_projekt_sem5 {
             SaveToCsv(csvPath + testsPerformed + fileNameInfos, csvDataBufferEachIteration, false);
             SaveToCsv(csvTestTimePath, csvDataBuffer, false);
             SaveToCsv(csvHistoryPath, csvDataBuffer);
+
+            lastDataFileName = testsPerformed + fileNameInfos;
+        }
+
+        private void buttonGenerateChart_Click(object sender, EventArgs e) {
+            labelStatus.Text = "Generating Chart";
+            labelStatus.Refresh();
+            try {
+                ProcessStartInfo startInfo = new ProcessStartInfo {
+                    FileName = "python",
+                    Arguments = $"{basePath}JA_projekt_sem5\\chart-generation.py {csvPath} {lastDataFileName}",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                };
+
+                using (Process process = Process.Start(startInfo)) {
+                    process.WaitForExit();
+
+                    if (process.ExitCode == 0) { 
+                        labelStatus.Text = $"Chart saved at: test_results\\{lastDataFileName}";
+                    } else {
+                        labelStatus.Text = "Error while executing script!";
+                    }
+                }
+            } catch (Exception ex) {
+                MessageBox.Show($"An error occurred: {ex.Message}");
+                labelStatus.Text = "Error while executing chart generation";
+            }
+            labelStatus.Refresh();
         }
 
         private string ConvertMillisecondsToTimeFormat(long milliseconds) {
