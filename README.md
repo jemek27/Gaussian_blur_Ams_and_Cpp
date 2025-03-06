@@ -10,6 +10,10 @@ Presentation in English and final project report in Polish available in the fold
 ## **Before and After**  
 ![Before and After Gaussian Blur](other/images/input-outputSzcupak27r.jpg)  
 
+## **UI** 
+![UI-ss](other/images/UI-ss1.jpg)
+![UI-ss-chart](other/images/UI-ss2-chart.jpg)
+
 ## **Process Visualization**  
 ![Gaussian Blur Process](other/images/sem5-proj-ja-ss1.jpg)  
 ![Visualization](other/images/blur_animation_v2.gif)  
