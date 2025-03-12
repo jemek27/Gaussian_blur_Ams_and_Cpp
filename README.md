@@ -12,7 +12,7 @@ Presentation in English and final project report in Polish available in the fold
 
 ## **UI** 
 ![UI-ss](other/images/UI-ss1.jpg)
-![UI-ss-chart](other/images/UI-ss2-chart.jpg)
+![UI-ss-chart](other/images/UI-ss2-chartv2.jpg)
 
 ## **Process Visualization**  
 ![Gaussian Blur Process](other/images/sem5-proj-ja-ss1.jpg)  
