@@ -15,8 +15,10 @@ Presentation in English and final project report in Polish available in the fold
 ![UI-ss-chart](other/images/UI-ss2-chartv2.jpg)
 
 ## **Process Visualization**  
-![Gaussian Blur Process](other/images/sem5-proj-ja-ss1.jpg)  
-![Visualization](other/images/blur_animation_v2.gif)  
+|                       |  
+|:---------------------:|  
+| ![Gaussian Blur Process](other/images/sem5-proj-ja-ss1.jpg) |  
+![Visualization](other/images/blur_animation_v2.gif)
 
 ## **Performance Data Charts**  
 ![Chart 1](other/charts/1-8-kolorki-SMALL_MEDIUM_BIG_dll_times_bar.png) 
